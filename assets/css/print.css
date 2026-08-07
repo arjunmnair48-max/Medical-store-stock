@@ -1,0 +1,66 @@
+/* ============================================================
+   print.css — A4 landscape output for pasting into the register
+   ============================================================ */
+
+@page {
+  size: A4 landscape;
+  margin: 10mm 8mm;
+}
+
+/* the indent / expiry / maintenance sheets read better upright, but a
+   single @page rule has to serve them all — landscape suits the wide
+   monthly register, which is the sheet that is printed every month. */
+
+html, body { background: #fff !important; }
+
+.no-print,
+.sidebar,
+.page-head,
+.toolbar,
+.banner,
+.modal-back,
+.toast { display: none !important; }
+
+#app { display: block !important; }
+.main { padding: 0 !important; }
+
+/* only the report view is printable */
+.view:not(#view-reports) { display: none !important; }
+#view-reports .card { display: none !important; }
+
+.report-area { display: block !important; }
+
+.sheet {
+  width: auto !important;
+  min-height: 0 !important;
+  max-width: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: #fff !important;
+  color: #000 !important;
+}
+
+table.rp-table { font-size: 9.5pt; }
+table.rp-table th { font-size: 9pt; }
+
+table.rp-table thead { display: table-header-group; }
+table.rp-table tr { page-break-inside: avoid; break-inside: avoid; }
+
+.rp-head { page-break-after: avoid; break-after: avoid; }
+.rp-sign { page-break-inside: avoid; break-inside: avoid; }
+
+table.rp-table th {
+  background: #e8e8e8 !important;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+table.rp-table tr.rp-total td {
+  background: #f0f0f0 !important;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+a { text-decoration: none; color: #000; }

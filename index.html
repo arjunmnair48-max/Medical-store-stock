@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Medical Centre Stock Register</title>
+<link rel="stylesheet" href="assets/css/app.css" />
+<link rel="stylesheet" href="assets/css/print.css" media="print" />
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ================= SIDEBAR ================= -->
+  <aside class="sidebar no-print">
+    <div class="brand">
+      <div class="brand-mark">+</div>
+      <div>
+        <div class="brand-name">Stock Register</div>
+        <div class="brand-sub" id="brandCentre">Medical Centre</div>
+      </div>
+    </div>
+
+    <nav class="nav">
+      <button class="nav-item active" data-view="dashboard"><span>▤</span> Dashboard</button>
+      <button class="nav-item" data-view="items"><span>☰</span> Item Master</button>
+      <button class="nav-item" data-view="txns"><span>⇄</span> Receipt / Issue</button>
+      <button class="nav-item" data-view="monthly"><span>▦</span> Monthly Stock</button>
+      <button class="nav-item" data-view="maint"><span>⚙</span> Asset Maintenance</button>
+      <button class="nav-item" data-view="reports"><span>🖶</span> Print Reports</button>
+      <button class="nav-item" data-view="settings"><span>⚒</span> Settings &amp; Backup</button>
+    </nav>
+
+    <div class="sidebar-foot">
+      <div class="hint">Data is stored in this browser.<br />Take a backup regularly.</div>
+    </div>
+  </aside>
+
+  <!-- ================= MAIN ================= -->
+  <main class="main">
+
+    <!-- ---------- DASHBOARD ---------- -->
+    <section class="view" id="view-dashboard">
+      <header class="page-head no-print">
+        <div>
+          <h1>Dashboard</h1>
+          <p class="muted" id="dashSubtitle">Stock position as on today</p>
+        </div>
+        <div class="head-actions">
+          <button class="btn" data-goto="txns">+ Receipt / Issue</button>
+          <button class="btn primary" data-goto="items">+ New Item</button>
+        </div>
+      </header>
+
+      <div class="stat-grid" id="statGrid"></div>
+
+      <div class="split">
+        <div class="card">
+          <div class="card-head">
+            <h2>Low stock / To be indented</h2>
+            <button class="link" data-report="indent">Print list</button>
+          </div>
+          <div id="lowStockList" class="mini-list"></div>
+        </div>
+        <div class="card">
+          <div class="card-head">
+            <h2>Expiry alerts</h2>
+            <button class="link" data-report="expiry">Print list</button>
+          </div>
+          <div id="expiryList" class="mini-list"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2>Maintenance due (permanent assets)</h2>
+          <button class="link" data-goto="maint">Open log</button>
+        </div>
+        <div id="maintDueList" class="mini-list"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2>Recent entries</h2></div>
+        <div id="recentList" class="mini-list"></div>
+      </div>
+    </section>
+
+    <!-- ---------- ITEM MASTER ---------- -->
+    <section class="view hidden" id="view-items">
+      <header class="page-head no-print">
+        <div>
+          <h1>Item Master</h1>
+          <p class="muted">Medicines, disposable items and permanent assets</p>
+        </div>
+        <div class="head-actions">
+          <button class="btn primary" id="btnNewItem">+ Add Item</button>
+        </div>
+      </header>
+
+      <div class="toolbar">
+        <div class="tabs" id="itemTabs">
+          <button class="tab active" data-cat="all">All</button>
+          <button class="tab" data-cat="medicine">Medicines</button>
+          <button class="tab" data-cat="disposable">Disposables</button>
+          <button class="tab" data-cat="asset">Permanent Assets</button>
+        </div>
+        <input class="search" id="itemSearch" type="search" placeholder="Search name, code, batch, rack…" />
+      </div>
+
+      <div class="card flush">
+        <div class="table-wrap"><table class="grid" id="itemTable"></table></div>
+      </div>
+    </section>
+
+    <!-- ---------- TRANSACTIONS ---------- -->
+    <section class="view hidden" id="view-txns">
+      <header class="page-head no-print">
+        <div>
+          <h1>Receipt / Issue Entry</h1>
+          <p class="muted">Every movement of stock is recorded here</p>
+        </div>
+      </header>
+
+      <div class="card">
+        <form id="txnForm" class="form-grid">
+          <label class="fld">
+            <span>Date <b>*</b></span>
+            <input type="date" name="date" required />
+          </label>
+          <label class="fld wide">
+            <span>Item <b>*</b></span>
+            <select name="itemId" required id="txnItemSelect"></select>
+          </label>
+          <label class="fld">
+            <span>Entry type <b>*</b></span>
+            <select name="type" required>
+              <option value="IN">Receipt (stock received)</option>
+              <option value="OUT">Issue / Consumption</option>
+              <option value="EXP">Expired / Damaged / Condemned</option>
+              <option value="ADJ">Adjustment (+/-)</option>
+            </select>
+          </label>
+          <label class="fld">
+            <span>Quantity <b>*</b></span>
+            <input type="number" name="qty" step="any" required placeholder="0" />
+          </label>
+          <label class="fld">
+            <span>Bill / Indent / Voucher No.</span>
+            <input type="text" name="ref" placeholder="e.g. INV-2291" />
+          </label>
+          <label class="fld">
+            <span>Received from / Issued to</span>
+            <input type="text" name="party" placeholder="Supplier or department / patient" />
+          </label>
+          <label class="fld">
+            <span>Batch No.</span>
+            <input type="text" name="batchNo" />
+          </label>
+          <label class="fld">
+            <span>Expiry date</span>
+            <input type="month" name="expiry" />
+          </label>
+          <label class="fld">
+            <span>Rate per unit (₹)</span>
+            <input type="number" name="rate" step="any" />
+          </label>
+          <label class="fld wide">
+            <span>Remarks</span>
+            <input type="text" name="remarks" />
+          </label>
+          <div class="form-actions">
+            <span class="hint" id="txnBalanceHint"></span>
+            <button type="reset" class="btn">Clear</button>
+            <button type="submit" class="btn primary">Save Entry</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="toolbar">
+        <div class="tabs" id="txnFilterTabs">
+          <button class="tab active" data-t="all">All</button>
+          <button class="tab" data-t="IN">Receipts</button>
+          <button class="tab" data-t="OUT">Issues</button>
+          <button class="tab" data-t="EXP">Expiry / Damage</button>
+          <button class="tab" data-t="ADJ">Adjustments</button>
+        </div>
+        <input class="search" id="txnSearch" type="search" placeholder="Search item, bill no, party…" />
+      </div>
+
+      <div class="card flush">
+        <div class="table-wrap"><table class="grid" id="txnTable"></table></div>
+      </div>
+    </section>
+
+    <!-- ---------- MONTHLY STOCK ---------- -->
+    <section class="view hidden" id="view-monthly">
+      <header class="page-head no-print">
+        <div>
+          <h1>Monthly Stock Update</h1>
+          <p class="muted">Enter physical count, verify against book balance, then close the month</p>
+        </div>
+        <div class="head-actions">
+          <input type="month" id="monthPicker" />
+          <button class="btn" id="btnFillBook">Fill physical = book</button>
+          <button class="btn primary" id="btnCloseMonth">Close &amp; Save Month</button>
+        </div>
+      </header>
+
+      <div class="banner" id="monthBanner"></div>
+
+      <div class="toolbar">
+        <div class="tabs" id="monthTabs">
+          <button class="tab active" data-cat="medicine">Medicines</button>
+          <button class="tab" data-cat="disposable">Disposables</button>
+          <button class="tab" data-cat="asset">Permanent Assets</button>
+        </div>
+        <input class="search" id="monthSearch" type="search" placeholder="Search item…" />
+      </div>
+
+      <div class="card flush">
+        <div class="table-wrap"><table class="grid" id="monthTable"></table></div>
+      </div>
+    </section>
+
+    <!-- ---------- MAINTENANCE ---------- -->
+    <section class="view hidden" id="view-maint">
+      <header class="page-head no-print">
+        <div>
+          <h1>Asset Maintenance Register</h1>
+          <p class="muted">Service, repair and calibration record of permanent assets</p>
+        </div>
+      </header>
+
+      <div class="card">
+        <form id="maintForm" class="form-grid">
+          <label class="fld wide">
+            <span>Asset <b>*</b></span>
+            <select name="itemId" required id="maintItemSelect"></select>
+          </label>
+          <label class="fld">
+            <span>Date of service <b>*</b></span>
+            <input type="date" name="date" required />
+          </label>
+          <label class="fld">
+            <span>Nature of work <b>*</b></span>
+            <select name="type" required>
+              <option value="Service">Routine service</option>
+              <option value="Repair">Repair</option>
+              <option value="Calibration">Calibration</option>
+              <option value="Inspection">Inspection</option>
+            </select>
+          </label>
+          <label class="fld">
+            <span>Done by (firm / engineer)</span>
+            <input type="text" name="doneBy" />
+          </label>
+          <label class="fld">
+            <span>Cost (₹)</span>
+            <input type="number" name="cost" step="any" />
+          </label>
+          <label class="fld">
+            <span>Next due date</span>
+            <input type="date" name="nextDue" />
+          </label>
+          <label class="fld wide">
+            <span>Remarks</span>
+            <input type="text" name="remarks" />
+          </label>
+          <div class="form-actions">
+            <button type="reset" class="btn">Clear</button>
+            <button type="submit" class="btn primary">Save Record</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="card flush">
+        <div class="table-wrap"><table class="grid" id="maintTable"></table></div>
+      </div>
+    </section>
+
+    <!-- ---------- REPORTS ---------- -->
+    <section class="view hidden" id="view-reports">
+      <header class="page-head no-print">
+        <div>
+          <h1>Print Reports</h1>
+          <p class="muted">Print on A4 and paste into the stock register</p>
+        </div>
+      </header>
+
+      <div class="card no-print">
+        <div class="report-picker">
+          <label class="fld">
+            <span>Report</span>
+            <select id="reportType">
+              <option value="monthly-medicine">Monthly Stock Register — Medicines</option>
+              <option value="monthly-disposable">Monthly Stock Register — Disposable Items</option>
+              <option value="monthly-all">Monthly Stock Register — Medicines + Disposables</option>
+              <option value="asset">Permanent Asset Register</option>
+              <option value="expiry">Expiry / Near-Expiry Report</option>
+              <option value="indent">Low Stock — Indent List</option>
+              <option value="maint">Asset Maintenance Report</option>
+              <option value="ledger">Item Ledger (single item)</option>
+              <option value="daybook">Receipt &amp; Issue Day Book</option>
+            </select>
+          </label>
+          <label class="fld" id="repMonthWrap">
+            <span>Month</span>
+            <input type="month" id="reportMonth" />
+          </label>
+          <label class="fld hidden" id="repItemWrap">
+            <span>Item</span>
+            <select id="reportItem"></select>
+          </label>
+          <div class="form-actions">
+            <button class="btn" id="btnBuildReport">Preview</button>
+            <button class="btn primary" id="btnPrintReport">🖶 Print</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="reportArea" class="report-area"></div>
+    </section>
+
+    <!-- ---------- SETTINGS ---------- -->
+    <section class="view hidden" id="view-settings">
+      <header class="page-head no-print">
+        <div>
+          <h1>Settings &amp; Backup</h1>
+          <p class="muted">Centre details printed on every report, and your data backup</p>
+        </div>
+      </header>
+
+      <div class="card">
+        <h2 class="card-title">Medical centre details</h2>
+        <form id="settingsForm" class="form-grid">
+          <label class="fld wide">
+            <span>Name of medical centre <b>*</b></span>
+            <input type="text" name="centreName" required placeholder="e.g. Primary Health Centre, Ambalapuzha" />
+          </label>
+          <label class="fld wide">
+            <span>Address</span>
+            <input type="text" name="address" />
+          </label>
+          <label class="fld">
+            <span>Store keeper / Pharmacist</span>
+            <input type="text" name="storeKeeper" />
+          </label>
+          <label class="fld">
+            <span>Medical Officer in charge</span>
+            <input type="text" name="officer" />
+          </label>
+          <label class="fld">
+            <span>Reorder alert — days before expiry</span>
+            <input type="number" name="expiryDays" min="1" step="1" />
+          </label>
+          <label class="fld">
+            <span>Currency symbol</span>
+            <input type="text" name="currency" maxlength="3" />
+          </label>
+          <div class="form-actions">
+            <button type="submit" class="btn primary">Save Settings</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">Backup &amp; restore</h2>
+        <p class="muted small">All data lives inside this browser. Export a backup file after every monthly closing and keep it safe.</p>
+        <div class="btn-row">
+          <button class="btn primary" id="btnExport">⭳ Export backup (.json)</button>
+          <button class="btn" id="btnImport">⭱ Restore from backup</button>
+          <input type="file" id="importFile" accept="application/json,.json" hidden />
+          <button class="btn" id="btnCsvItems">Export items (.csv)</button>
+          <button class="btn" id="btnCsvTxns">Export transactions (.csv)</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">Sample data</h2>
+        <p class="muted small">Load a small set of demo items to try the app. This adds to existing data.</p>
+        <div class="btn-row">
+          <button class="btn" id="btnSample">Load sample data</button>
+          <button class="btn danger" id="btnWipe">Erase all data</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ================= ITEM MODAL ================= -->
+<div class="modal-back hidden no-print" id="itemModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="itemModalTitle">Add Item</h2>
+      <button class="icon-btn" id="itemModalClose">✕</button>
+    </div>
+    <form id="itemForm" class="modal-body form-grid">
+      <input type="hidden" name="id" />
+      <label class="fld">
+        <span>Category <b>*</b></span>
+        <select name="category" required id="itemCategory">
+          <option value="medicine">Medicine</option>
+          <option value="disposable">Disposable item</option>
+          <option value="asset">Permanent asset</option>
+        </select>
+      </label>
+      <label class="fld wide">
+        <span>Item name <b>*</b></span>
+        <input type="text" name="name" required placeholder="e.g. Paracetamol 500 mg tablet" />
+      </label>
+      <label class="fld">
+        <span>Item / Stock code</span>
+        <input type="text" name="code" />
+      </label>
+      <label class="fld">
+        <span>Unit <b>*</b></span>
+        <input type="text" name="unit" required placeholder="Nos / Strip / Bottle / Box" list="unitList" />
+      </label>
+      <datalist id="unitList">
+        <option>Nos</option><option>Strip</option><option>Tablet</option><option>Bottle</option>
+        <option>Vial</option><option>Ampoule</option><option>Tube</option><option>Box</option>
+        <option>Packet</option><option>Pair</option><option>Roll</option><option>ml</option>
+      </datalist>
+
+      <!-- medicine / disposable fields -->
+      <label class="fld cat-med cat-dis">
+        <span>Strength / Specification</span>
+        <input type="text" name="spec" placeholder="500 mg / 24G / Medium" />
+      </label>
+      <label class="fld cat-med">
+        <span>Dosage form</span>
+        <select name="form">
+          <option value="">—</option>
+          <option>Tablet</option><option>Capsule</option><option>Syrup</option>
+          <option>Injection</option><option>Ointment</option><option>Drops</option>
+          <option>Powder</option><option>Inhaler</option><option>IV Fluid</option>
+        </select>
+      </label>
+      <label class="fld cat-med cat-dis">
+        <span>Batch No.</span>
+        <input type="text" name="batchNo" />
+      </label>
+      <label class="fld cat-med cat-dis">
+        <span>Expiry date</span>
+        <input type="month" name="expiry" />
+      </label>
+      <label class="fld cat-med cat-dis">
+        <span>Manufacturer</span>
+        <input type="text" name="manufacturer" />
+      </label>
+
+      <!-- asset fields -->
+      <label class="fld cat-ast">
+        <span>Asset tag / Register No.</span>
+        <input type="text" name="assetTag" />
+      </label>
+      <label class="fld cat-ast">
+        <span>Serial / Model No.</span>
+        <input type="text" name="serialNo" />
+      </label>
+      <label class="fld cat-ast">
+        <span>Date of purchase</span>
+        <input type="date" name="purchaseDate" />
+      </label>
+      <label class="fld cat-ast">
+        <span>Purchase cost (₹)</span>
+        <input type="number" name="purchaseCost" step="any" />
+      </label>
+      <label class="fld cat-ast">
+        <span>Warranty / AMC up to</span>
+        <input type="date" name="warrantyUpto" />
+      </label>
+      <label class="fld cat-ast">
+        <span>Condition</span>
+        <select name="condition">
+          <option>Working</option>
+          <option>Under repair</option>
+          <option>Condemned</option>
+        </select>
+      </label>
+
+      <label class="fld">
+        <span>Supplier</span>
+        <input type="text" name="supplier" />
+      </label>
+      <label class="fld">
+        <span>Rack / Location</span>
+        <input type="text" name="location" />
+      </label>
+      <label class="fld">
+        <span>Rate per unit (₹)</span>
+        <input type="number" name="rate" step="any" />
+      </label>
+      <label class="fld cat-med cat-dis">
+        <span>Minimum / reorder level</span>
+        <input type="number" name="minLevel" step="any" placeholder="0" />
+      </label>
+      <label class="fld">
+        <span>Opening stock</span>
+        <input type="number" name="openingStock" step="any" placeholder="0" />
+      </label>
+      <label class="fld">
+        <span>Opening stock as on (month)</span>
+        <input type="month" name="openingMonth" />
+      </label>
+      <label class="fld wide">
+        <span>Remarks</span>
+        <input type="text" name="remarks" />
+      </label>
+
+      <div class="form-actions">
+        <button type="button" class="btn danger hidden" id="btnDeleteItem">Delete</button>
+        <button type="button" class="btn" id="itemCancel">Cancel</button>
+        <button type="submit" class="btn primary">Save Item</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden no-print"></div>
+
+<script src="assets/js/store.js"></script>
+<script src="assets/js/ui.js"></script>
+<script src="assets/js/items.js"></script>
+<script src="assets/js/transactions.js"></script>
+<script src="assets/js/monthly.js"></script>
+<script src="assets/js/maintenance.js"></script>
+<script src="assets/js/reports.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>
