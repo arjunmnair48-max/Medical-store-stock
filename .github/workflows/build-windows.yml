@@ -68,11 +68,21 @@ jobs:
             dist/*.exe
           retention-days: 90
 
-      - name: Publish a release for a version tag
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Read the version from package.json
+        id: ver
+        shell: pwsh
+        run: |
+          $v = (Get-Content package.json | ConvertFrom-Json).version
+          "version=$v" >> $env:GITHUB_OUTPUT
+
+      # Publishes on a version tag, and also on the default branch so the
+      # current build is always downloadable without having to tag by hand.
+      - name: Publish the release
+        if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          name: Stock Register ${{ github.ref_name }}
+          tag_name: v${{ steps.ver.outputs.version }}
+          name: Stock Register v${{ steps.ver.outputs.version }}
           files: dist/*.exe
           body: |
             **Medical Centre Stock Register** — Windows desktop app.
