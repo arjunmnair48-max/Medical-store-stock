@@ -25,6 +25,28 @@
 
   var db = null;
 
+  /* ------------------------------------------------------------
+     Storage adapter.
+
+     In the desktop build the register is a real file on disk, handed
+     over by the preload bridge. In a plain browser it falls back to
+     the browser's own storage. Everything below is unaware of which.
+     ------------------------------------------------------------ */
+  var backend = (global.desktop && global.desktop.isDesktop)
+    ? {
+      name: 'file',
+      read: function () { return global.desktop.load(); },
+      write: function (json) {
+        var r = global.desktop.save(json);
+        if (r && r.ok === false) throw new Error(r.error || 'could not write the register file');
+      }
+    }
+    : {
+      name: 'browser',
+      read: function () { return global.localStorage.getItem(KEY); },
+      write: function (json) { global.localStorage.setItem(KEY, json); }
+    };
+
   function clone(o) { return JSON.parse(JSON.stringify(o)); }
 
   function uid() {
@@ -35,7 +57,7 @@
   function load() {
     if (db) return db;
     try {
-      var raw = global.localStorage.getItem(KEY);
+      var raw = backend.read();
       db = raw ? JSON.parse(raw) : clone(DEFAULTS);
     } catch (e) {
       db = clone(DEFAULTS);
@@ -53,10 +75,12 @@
 
   function save() {
     try {
-      global.localStorage.setItem(KEY, JSON.stringify(load()));
+      backend.write(JSON.stringify(load()));
       return true;
     } catch (e) {
-      global.alert('Could not save — browser storage is full or blocked.\n\n' + e.message);
+      global.alert(backend.name === 'file'
+        ? 'Could not save the register file.\n\n' + e.message
+        : 'Could not save — browser storage is full or blocked.\n\n' + e.message);
       return false;
     }
   }
@@ -368,6 +392,7 @@
 
   global.Store = {
     KEY: KEY,
+    backend: backend.name,
     load: load,
     save: save,
     replaceAll: replaceAll,

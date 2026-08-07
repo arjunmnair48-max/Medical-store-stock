@@ -1,0 +1,90 @@
+name: Build Windows exe
+
+# Builds the desktop app on a real Windows machine.
+#
+#  * every push / manual run  -> the .exe files are attached to the run
+#    as downloadable artifacts
+#  * a pushed tag like v1.0.0 -> the .exe files are published on the
+#    repository's Releases page
+
+on:
+  push:
+    branches: ['**']
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci || npm install
+
+      - name: Build installer and portable exe
+        run: npx electron-builder --win --x64 --publish never
+
+      - name: Check the exe files were produced
+        shell: pwsh
+        run: |
+          Get-ChildItem dist -Filter *.exe | ForEach-Object {
+            "{0}  —  {1:N1} MB" -f $_.Name, ($_.Length / 1MB)
+          }
+          if (-not (Get-ChildItem dist -Filter *.exe)) {
+            throw "no .exe was produced"
+          }
+
+      - name: Smoke-test the built app
+        shell: pwsh
+        run: |
+          # Launch the packaged app and confirm the process stays up,
+          # which catches a broken package that cannot even start.
+          $exe = "dist\win-unpacked\Medical Centre Stock Register.exe"
+          if (-not (Test-Path $exe)) { throw "packaged exe missing" }
+          $p = Start-Process -FilePath $exe -PassThru
+          Start-Sleep -Seconds 20
+          if ($p.HasExited) {
+            throw "the app exited immediately with code $($p.ExitCode)"
+          }
+          Stop-Process -Id $p.Id -Force
+          "app started and stayed running"
+
+      - name: Upload the exe files as build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-exe
+          path: |
+            dist/*.exe
+          retention-days: 90
+
+      - name: Publish a release for a version tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Stock Register ${{ github.ref_name }}
+          files: dist/*.exe
+          body: |
+            **Medical Centre Stock Register** — Windows desktop app.
+
+            | File | What it is |
+            |---|---|
+            | `MedicalCentreStockRegister-Setup-*.exe` | Installer. Run it, then start the app from the Desktop shortcut. No administrator rights needed. |
+            | `MedicalCentreStockRegister-Portable-*.exe` | Portable. Runs straight from a pen drive, nothing installed. |
+
+            Windows SmartScreen will warn that the publisher is unknown — the
+            app is not code-signed. Choose **More info → Run anyway**.
+
+            The register is kept in a file on the computer, under
+            `%APPDATA%\Medical Centre Stock Register\`, with a daily snapshot
+            in the `backups` folder beside it.

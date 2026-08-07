@@ -32,7 +32,8 @@
     </nav>
 
     <div class="sidebar-foot">
-      <div class="hint">Data is stored in this browser.<br />Take a backup regularly.</div>
+      <div class="hint" id="sidebarHint">Data is stored in this browser.<br />Take a backup regularly.</div>
+      <div class="hint" id="appVersion"></div>
     </div>
   </aside>
 
@@ -313,6 +314,7 @@
           </label>
           <div class="form-actions">
             <button class="btn" id="btnBuildReport">Preview</button>
+            <button class="btn hidden" id="btnPdfReport">⭳ Save as PDF</button>
             <button class="btn primary" id="btnPrintReport">🖶 Print</button>
           </div>
         </div>
@@ -365,7 +367,14 @@
 
       <div class="card">
         <h2 class="card-title">Backup &amp; restore</h2>
-        <p class="muted small">All data lives inside this browser. Export a backup file after every monthly closing and keep it safe.</p>
+        <p class="muted small browser-only">All data lives inside this browser. Export a backup file after every monthly closing and keep it safe.</p>
+        <div class="desktop-only hidden">
+          <p class="muted small">The register is saved automatically to a file on this computer, and a
+            snapshot is kept every day. Still take your own backup after each monthly closing and keep it
+            on a pen drive or a shared folder.</p>
+          <p class="path-line">Register file: <code id="dataPath">—</code></p>
+          <p class="path-line">Daily snapshots: <code id="backupPath">—</code></p>
+        </div>
         <div class="btn-row">
           <button class="btn primary" id="btnExport">⭳ Export backup (.json)</button>
           <button class="btn" id="btnImport">⭱ Restore from backup</button>
@@ -373,6 +382,23 @@
           <button class="btn" id="btnCsvItems">Export items (.csv)</button>
           <button class="btn" id="btnCsvTxns">Export transactions (.csv)</button>
         </div>
+      </div>
+
+      <div class="card" id="guideCard">
+        <h2 class="card-title">How to use this register</h2>
+        <ol class="guide">
+          <li><b>Set up once</b> — fill in the centre details above, then add every item in
+            <b>Item Master</b> with its opening stock.</li>
+          <li><b>Every day</b> — record each stock movement in <b>Receipt / Issue</b>: receipts with the
+            bill number, issues with the department or indent number, and anything expired or damaged as
+            a write-off.</li>
+          <li><b>End of the month</b> — open <b>Monthly Stock</b>, count the shelves, enter the physical
+            count beside the book balance, give a reason for any difference, then press
+            <b>Close &amp; Save Month</b>. The physical count becomes next month's opening.</li>
+          <li><b>Then print</b> — go to <b>Print Reports</b>, choose the monthly register, print it on
+            A4 landscape and paste it into the register book. Get it signed.</li>
+          <li><b>Finally</b> — take a backup and keep the file safe.</li>
+        </ol>
       </div>
 
       <div class="card">

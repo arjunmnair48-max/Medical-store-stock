@@ -289,6 +289,71 @@
     }
   }
 
+  /* ---------------- desktop build ---------------- */
+
+  /**
+   * When running inside the Electron shell the register is a file on
+   * disk, the native menu drives the app, and backup/restore go
+   * through the operating system's own dialogs.
+   */
+  function desktopSetup() {
+    var d = global.desktop;
+    if (!d || !d.isDesktop) return;
+
+    document.body.classList.add('is-desktop');
+
+    // the browser-storage warning does not apply to the desktop build
+    UI.$$('.browser-only').forEach(function (el) { el.classList.add('hidden'); });
+    UI.$$('.desktop-only').forEach(function (el) { el.classList.remove('hidden'); });
+
+    var p = d.paths ? d.paths() : null;
+    if (p) {
+      var el = UI.$('#dataPath');
+      if (el) el.textContent = p.dataFile;
+      var bk = UI.$('#backupPath');
+      if (bk) bk.textContent = p.backupDir;
+      var vr = UI.$('#appVersion');
+      if (vr) vr.textContent = 'v' + p.version;
+    }
+
+    UI.$('#sidebarHint').innerHTML =
+      'Saved automatically to a file on this computer.<br />A snapshot is kept each day.';
+
+    var pdfBtn = UI.$('#btnPdfReport');
+    if (pdfBtn) {
+      pdfBtn.classList.remove('hidden');
+      pdfBtn.addEventListener('click', savePdf);
+    }
+
+    d.onMenu(function (cmd) {
+      if (cmd.indexOf('go:') === 0) { go(cmd.slice(3)); return; }
+      switch (cmd) {
+        case 'new-item': go('items'); Items.open(null); break;
+        case 'new-txn': go('txns'); break;
+        case 'print':
+          if (current !== 'reports') Reports.openWith('monthly-all');
+          setTimeout(function () { global.print(); }, 120);
+          break;
+        case 'pdf': savePdf(); break;
+        case 'sample': go('settings'); sample(); break;
+        case 'guide': go('settings'); UI.$('#guideCard').scrollIntoView({ behavior: 'smooth' }); break;
+      }
+    });
+  }
+
+  function savePdf() {
+    if (!global.desktop || !global.desktop.savePdf) return;
+    if (current !== 'reports') Reports.openWith('monthly-all');
+    setTimeout(function () {
+      var name = UI.$('#reportType').options[UI.$('#reportType').selectedIndex].text
+        .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      global.desktop.savePdf(name + '.pdf').then(function (r) {
+        if (r && r.ok) UI.toast('PDF saved');
+        else if (r && !r.canceled) UI.toast('Could not save the PDF', 'bad');
+      });
+    }, 150);
+  }
+
   /* ---------------- boot ---------------- */
 
   function init() {
@@ -328,6 +393,8 @@
         Reports.openWith('monthly-all');
       }
     });
+
+    desktopSetup();
 
     loadSettings();
     var name = Store.settings().centreName || 'Medical Centre';

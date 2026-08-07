@@ -4,23 +4,71 @@ A stock-keeping app for a medical centre — medicines, disposable items and
 permanent assets — with a monthly stock update and printable A4 report sheets
 that can be pasted straight into the physical register.
 
-It runs entirely in the browser. There is nothing to install, no server and no
-internet connection needed. All data is kept in the browser's own storage on
-the computer where it is used.
+It runs offline. Nothing is sent anywhere, no server is involved and no
+internet connection is needed.
+
+There are two ways to run it — a **Windows program** (recommended) or by
+opening a file in a browser.
 
 ---
 
-## Getting started
+## Getting started — Windows program
 
-1. Download or clone this repository.
-2. Open **`index.html`** by double-clicking it (Chrome or Edge recommended).
-3. Go to **Settings & Backup** and enter the name of your medical centre,
-   the store keeper and the medical officer. These are printed on every report.
-4. Go to **Item Master → + Add Item** and enter your items.
+Download from the [**Releases**](../../releases) page:
 
-To try it out first, use **Settings & Backup → Load sample data**, which fills
-in 15 demo items and a month's worth of entries. **Erase all data** clears it
-again.
+| File | What it is |
+|---|---|
+| `MedicalCentreStockRegister-Setup-1.0.0.exe` | **Installer.** Run it, click through, and the app appears on the Desktop and in the Start Menu. No administrator rights needed. |
+| `MedicalCentreStockRegister-Portable-1.0.0.exe` | **Portable.** Runs straight from a pen drive. Nothing is installed. |
+
+When you first run it Windows SmartScreen will say *"Windows protected your
+PC"* because the app is not code-signed (a signing certificate has to be bought
+from a certificate authority). Click **More info → Run anyway**. This happens
+once.
+
+Then:
+
+1. Open **Settings & Backup** and enter the name of your medical centre, the
+   store keeper and the medical officer. These are printed on every report.
+2. Open **Item Master → + Add Item** and enter your items.
+
+To try it out first, use **Help → Load Sample Data**, which fills in 15 demo
+items and a month's worth of entries. **Erase all data** clears it again.
+
+### Where the register is kept
+
+The Windows app keeps everything in a real file:
+
+```
+C:\Users\<your name>\AppData\Roaming\Medical Centre Stock Register\stock-data.json
+```
+
+It is written afresh every time something is saved, and a dated snapshot is
+kept automatically each day in the `backups` folder beside it (the last 30 are
+kept). **File → Open Data Folder** takes you straight there.
+
+Uninstalling the program does **not** delete this folder — the stock records
+survive an uninstall or a reinstall.
+
+### Keyboard shortcuts
+
+| | |
+|---|---|
+| `Ctrl+N` | Add item |
+| `Ctrl+E` | Record receipt / issue |
+| `Ctrl+B` | Save backup |
+| `Ctrl+P` | Print report |
+| `Ctrl+Shift+P` | Save report as PDF |
+| `Ctrl+1` … `Ctrl+7` | Jump to a screen |
+
+---
+
+## Getting started — browser version
+
+The same app also runs by simply opening **`index.html`** in Chrome or Edge,
+with no installation at all. Everything works identically except that the data
+is kept in that browser's storage rather than in a file — see the warning
+further down.
 
 ---
 
@@ -125,10 +173,13 @@ in days, and the currency symbol. Also:
 
 ---
 
-## Important — where the data lives
+## Important — the browser version and your data
 
-Everything is stored in the browser's local storage on that one computer, under
-that one browser. It is not sent anywhere.
+**This section applies only if you run `index.html` in a browser.** The Windows
+program keeps a real file and is not affected.
+
+In the browser version everything is stored in that browser's local storage on
+that one computer. It is not sent anywhere.
 
 That means:
 
@@ -139,28 +190,63 @@ That means:
 
 **So export a backup after every monthly closing** and keep the file on a pen
 drive or a shared folder. Restoring it on any computer rebuilds the register
-exactly.
+exactly. (This is good practice in the Windows version too, but there it is a
+second line of defence rather than the only one.)
 
 ---
 
 ## Files
 
 ```
-index.html              all screens
-assets/css/app.css      screen styles
-assets/css/print.css    A4 print layout
-assets/js/store.js      data + balance calculations (localStorage)
-assets/js/ui.js         shared helpers
-assets/js/items.js      Item Master
+index.html                 all screens
+assets/css/app.css         screen styles
+assets/css/print.css       A4 print layout
+assets/js/store.js         data + balance calculations
+assets/js/ui.js            shared helpers
+assets/js/items.js         Item Master
 assets/js/transactions.js  Receipt / Issue
-assets/js/monthly.js    monthly closing
+assets/js/monthly.js       monthly closing
 assets/js/maintenance.js   asset maintenance
-assets/js/reports.js    printable reports
-assets/js/app.js        routing, dashboard, settings, backup
+assets/js/reports.js       printable reports
+assets/js/app.js           routing, dashboard, settings, backup
+
+main.js                    Electron main process (window, menu, data file)
+preload.js                 the only bridge between the page and the OS
+build/icon.ico             application icon
+build/installer.nsi        NSIS installer script
+package.json               app metadata + electron-builder configuration
+.github/workflows/         builds the .exe on a Windows runner
 ```
 
-Plain HTML, CSS and JavaScript — no build step, no dependencies, no bundler.
-Opening `index.html` from the file system is all that is required.
+The app itself is plain HTML, CSS and JavaScript — no framework, no bundler, no
+build step. `assets/js/store.js` picks its storage at startup: the file on disk
+when the Electron bridge is present, the browser's storage otherwise. Nothing
+else in the app knows the difference, which is why the same code runs both
+ways.
+
+---
+
+## Building the .exe yourself
+
+```bash
+npm install
+npm run dist          # on Windows -> installer + portable exe in dist/
+```
+
+On Windows that produces both `MedicalCentreStockRegister-Setup-<version>.exe`
+and the portable exe. This is also what the GitHub Actions workflow runs, so
+pushing a tag like `v1.0.1` builds and publishes a new release automatically.
+
+To build the Windows exe **from Linux**, electron-builder's installer step
+needs Wine. To avoid that, `build/installer.nsi` compiles the same installer
+with a native Linux NSIS instead:
+
+```bash
+sudo apt-get install nsis
+npm run dist:linuxhost
+```
+
+`npm start` runs the app from source without packaging it.
 
 ## Using it on several computers
 

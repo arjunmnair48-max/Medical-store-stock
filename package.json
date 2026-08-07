@@ -1,0 +1,76 @@
+{
+  "name": "medical-centre-stock-register",
+  "productName": "Medical Centre Stock Register",
+  "version": "1.0.0",
+  "description": "Stock register for a medical centre \u2014 medicines, disposable items and permanent assets, with monthly closing and printable register sheets.",
+  "main": "main.js",
+  "author": {
+    "name": "Medical Centre Stock Register"
+  },
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win --x64",
+    "dist:linuxhost": "electron-builder --win --x64 --dir && makensis -DVERSION=$npm_package_version build/installer.nsi",
+    "dist:linux": "electron-builder --linux AppImage"
+  },
+  "devDependencies": {
+    "electron": "^43.0.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "org.medicalcentre.stockregister",
+    "productName": "Medical Centre Stock Register",
+    "copyright": "Medical Centre Stock Register",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "index.html",
+      "main.js",
+      "preload.js",
+      "assets/**/*",
+      "build/icon.*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Stock Register",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "artifactName": "MedicalCentreStockRegister-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "MedicalCentreStockRegister-Portable-${version}.${ext}"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Office",
+      "icon": "build/icon.png"
+    }
+  }
+}
