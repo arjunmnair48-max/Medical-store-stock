@@ -5,7 +5,10 @@
 ;  needed), creates Desktop and Start Menu shortcuts, and
 ;  registers a proper entry in Apps & Features.
 ;
-;  Build:  makensis -DVERSION=1.0.0 build/installer.nsi
+;  Build:  makensis -DVERSION=1.0.0 nsis-linux/installer.nsi
+;
+;  Kept out of build/ on purpose: electron-builder treats a file named
+;  build/installer.nsi as its own script template and clashes with it.
 ; ============================================================
 
 Unicode true
@@ -41,8 +44,8 @@ VIAddVersionKey "LegalCopyright"  "${PUBLISHER}"
 !include "MUI2.nsh"
 !include "FileFunc.nsh"
 
-!define MUI_ICON   "icon.ico"
-!define MUI_UNICON "icon.ico"
+!define MUI_ICON   "..\build\icon.ico"
+!define MUI_UNICON "..\build\icon.ico"
 !define MUI_ABORTWARNING
 
 !define MUI_WELCOMEPAGE_TITLE "${APP_NAME}"

@@ -12,7 +12,7 @@
   "scripts": {
     "start": "electron .",
     "dist": "electron-builder --win --x64",
-    "dist:linuxhost": "electron-builder --win --x64 --dir && makensis -DVERSION=$npm_package_version build/installer.nsi",
+    "dist:linuxhost": "electron-builder --win --x64 --dir && makensis -DVERSION=$npm_package_version nsis-linux/installer.nsi",
     "dist:linux": "electron-builder --linux AppImage"
   },
   "devDependencies": {

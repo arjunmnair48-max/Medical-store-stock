@@ -213,7 +213,7 @@ assets/js/app.js           routing, dashboard, settings, backup
 main.js                    Electron main process (window, menu, data file)
 preload.js                 the only bridge between the page and the OS
 build/icon.ico             application icon
-build/installer.nsi        NSIS installer script
+nsis-linux/installer.nsi   NSIS installer script (Linux-hosted builds)
 package.json               app metadata + electron-builder configuration
 .github/workflows/         builds the .exe on a Windows runner
 ```
@@ -238,7 +238,7 @@ and the portable exe. This is also what the GitHub Actions workflow runs, so
 pushing a tag like `v1.0.1` builds and publishes a new release automatically.
 
 To build the Windows exe **from Linux**, electron-builder's installer step
-needs Wine. To avoid that, `build/installer.nsi` compiles the same installer
+needs Wine. To avoid that, `nsis-linux/installer.nsi` compiles the same installer
 with a native Linux NSIS instead:
 
 ```bash
