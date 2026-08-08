@@ -25,6 +25,8 @@
       <button class="nav-item active" data-view="dashboard"><span>▤</span> Dashboard</button>
       <button class="nav-item" data-view="items"><span>☰</span> Item Master</button>
       <button class="nav-item" data-view="txns"><span>⇄</span> Receipt / Issue</button>
+      <button class="nav-item" data-view="rx"><span>℞</span> Prescriptions</button>
+      <button class="nav-item" data-view="referrals"><span>➦</span> Referrals</button>
       <button class="nav-item" data-view="monthly"><span>▦</span> Monthly Stock</button>
       <button class="nav-item" data-view="maint"><span>⚙</span> Asset Maintenance</button>
       <button class="nav-item" data-view="reports"><span>🖶</span> Print Reports</button>
@@ -193,6 +195,193 @@
       </div>
     </section>
 
+
+    <!-- ---------- PRESCRIPTIONS ---------- -->
+    <section class="view hidden" id="view-rx">
+      <header class="page-head no-print">
+        <div>
+          <h1>Prescription Register</h1>
+          <p class="muted">Medicines prescribed here are issued from stock automatically</p>
+        </div>
+        <div class="head-actions">
+          <button class="btn" data-report="rx-register">🖶 Print register</button>
+        </div>
+      </header>
+
+      <div class="card" id="rxFormCard">
+        <div class="card-head"><h2 id="rxFormTitle">New Prescription</h2></div>
+        <form id="rxForm" class="form-grid">
+          <input type="hidden" name="id" />
+          <label class="fld">
+            <span>Date <b>*</b></span>
+            <input type="date" name="date" required />
+          </label>
+          <label class="fld">
+            <span>Prescription No. <b>*</b></span>
+            <input type="text" name="no" required />
+          </label>
+          <label class="fld wide">
+            <span>Patient name <b>*</b></span>
+            <input type="text" name="patient" required placeholder="Full name" />
+          </label>
+          <label class="fld">
+            <span>Age</span>
+            <input type="text" name="age" placeholder="e.g. 34 y" />
+          </label>
+          <label class="fld">
+            <span>Sex</span>
+            <select name="sex">
+              <option value="">—</option>
+              <option>Female</option>
+              <option>Male</option>
+              <option>Other</option>
+            </select>
+          </label>
+          <label class="fld wide">
+            <span>Problem / Diagnosis</span>
+            <input type="text" name="problem" placeholder="Brief description of the complaint" />
+          </label>
+          <label class="fld">
+            <span>Prescribed by</span>
+            <input type="text" name="doctor" placeholder="Doctor's name" />
+          </label>
+          <label class="fld wide">
+            <span>Remarks</span>
+            <input type="text" name="remarks" />
+          </label>
+
+          <div class="rx-block">
+            <div class="rx-block-head">
+              <span>Medicines prescribed <b>*</b></span>
+              <span class="hint">Each line is issued from stock when you save</span>
+            </div>
+            <div class="rx-line rx-line-head">
+              <span>Medicine / disposable item</span>
+              <span>Quantity</span>
+              <span>Dosage / instructions</span>
+              <span>In stock</span>
+              <span></span>
+            </div>
+            <div id="rxLines"></div>
+            <button type="button" class="btn" id="rxAddLine">+ Add another medicine</button>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn hidden" id="rxCancelEdit">Cancel edit</button>
+            <button type="submit" class="btn primary" id="rxSaveBtn">Save &amp; Issue Medicines</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="toolbar">
+        <label class="inline-fld"><span>Month</span><input type="month" id="rxMonth" /></label>
+        <input class="search" id="rxSearch" type="search" placeholder="Search patient, prescription no, medicine…" />
+      </div>
+
+      <div class="card flush">
+        <div class="table-wrap"><table class="grid" id="rxTable"></table></div>
+      </div>
+    </section>
+
+    <!-- ---------- REFERRALS ---------- -->
+    <section class="view hidden" id="view-referrals">
+      <header class="page-head no-print">
+        <div>
+          <h1>Referral Register</h1>
+          <p class="muted">Patients referred out to other hospitals</p>
+        </div>
+        <div class="head-actions">
+          <button class="btn" data-report="referral-register">🖶 Print register</button>
+        </div>
+      </header>
+
+      <div class="card" id="refFormCard">
+        <div class="card-head"><h2 id="refFormTitle">New Referral</h2></div>
+        <form id="refForm" class="form-grid">
+          <input type="hidden" name="id" />
+          <label class="fld">
+            <span>Date <b>*</b></span>
+            <input type="date" name="date" required />
+          </label>
+          <label class="fld">
+            <span>Referral slip No. <b>*</b></span>
+            <input type="text" name="no" required />
+          </label>
+          <label class="fld wide">
+            <span>Patient name <b>*</b></span>
+            <input type="text" name="patient" required />
+          </label>
+          <label class="fld">
+            <span>Age</span>
+            <input type="text" name="age" placeholder="e.g. 34 y" />
+          </label>
+          <label class="fld">
+            <span>Sex</span>
+            <select name="sex">
+              <option value="">—</option>
+              <option>Female</option>
+              <option>Male</option>
+              <option>Other</option>
+            </select>
+          </label>
+          <label class="fld wide">
+            <span>Referred to — hospital <b>*</b></span>
+            <input type="text" name="hospital" required placeholder="Name of the hospital" />
+          </label>
+          <label class="fld">
+            <span>Under doctor / department</span>
+            <input type="text" name="referredTo" placeholder="e.g. Dept. of Surgery" />
+          </label>
+          <label class="fld wide">
+            <span>Reason for referral</span>
+            <input type="text" name="reason" placeholder="Condition / why referred" />
+          </label>
+          <label class="fld">
+            <span>Accompanied by</span>
+            <input type="text" name="escort" placeholder="Name of person accompanying" />
+          </label>
+          <label class="fld">
+            <span>Relation to patient</span>
+            <input type="text" name="relation" list="relationList" placeholder="e.g. Son" />
+          </label>
+          <datalist id="relationList">
+            <option>Father</option><option>Mother</option><option>Husband</option>
+            <option>Wife</option><option>Son</option><option>Daughter</option>
+            <option>Brother</option><option>Sister</option><option>Guardian</option>
+            <option>Neighbour</option><option>Self</option><option>Health worker</option>
+          </datalist>
+          <label class="fld">
+            <span>Mode of transport</span>
+            <select name="mode">
+              <option value="">—</option>
+              <option>Ambulance</option>
+              <option>Own arrangement</option>
+              <option>Public transport</option>
+              <option>Police / other</option>
+            </select>
+          </label>
+          <label class="fld wide">
+            <span>Remarks</span>
+            <input type="text" name="remarks" />
+          </label>
+
+          <div class="form-actions">
+            <button type="button" class="btn hidden" id="refCancelEdit">Cancel edit</button>
+            <button type="submit" class="btn primary" id="refSaveBtn">Save Referral</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="toolbar">
+        <label class="inline-fld"><span>Month</span><input type="month" id="refMonth" /></label>
+        <input class="search" id="refSearch" type="search" placeholder="Search patient, hospital, slip no…" />
+      </div>
+
+      <div class="card flush">
+        <div class="table-wrap"><table class="grid" id="refTable"></table></div>
+      </div>
+    </section>
+
     <!-- ---------- MONTHLY STOCK ---------- -->
     <section class="view hidden" id="view-monthly">
       <header class="page-head no-print">
@@ -300,6 +489,8 @@
               <option value="expiry">Expiry / Near-Expiry Report</option>
               <option value="indent">Low Stock — Indent List</option>
               <option value="maint">Asset Maintenance Report</option>
+          <option value="rx-register">Prescription Register (OP)</option>
+          <option value="referral-register">Referral Register</option>
               <option value="ledger">Item Ledger (single item)</option>
               <option value="daybook">Receipt &amp; Issue Day Book</option>
             </select>
@@ -381,6 +572,8 @@
           <input type="file" id="importFile" accept="application/json,.json" hidden />
           <button class="btn" id="btnCsvItems">Export items (.csv)</button>
           <button class="btn" id="btnCsvTxns">Export transactions (.csv)</button>
+          <button class="btn" id="btnCsvRx">Export prescriptions (.csv)</button>
+          <button class="btn" id="btnCsvReferrals">Export referrals (.csv)</button>
         </div>
       </div>
 
@@ -552,6 +745,8 @@
 <script src="assets/js/transactions.js"></script>
 <script src="assets/js/monthly.js"></script>
 <script src="assets/js/maintenance.js"></script>
+<script src="assets/js/prescriptions.js"></script>
+<script src="assets/js/referrals.js"></script>
 <script src="assets/js/reports.js"></script>
 <script src="assets/js/app.js"></script>
 </body>

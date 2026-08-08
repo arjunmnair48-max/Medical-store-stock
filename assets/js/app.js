@@ -41,6 +41,11 @@
     var lastClosed = Store.load().closings.map(function (c) { return c.month; })
       .sort().slice(-1)[0];
 
+    var m = Store.currentMonth();
+    var rxMonth = Store.rxList({ month: m });
+    var refMonth = Store.referralList({ month: m });
+    var medsIssued = rxMonth.reduce(function (n, r) { return n + (r.lines || []).length; }, 0);
+
     var cards = [
       { k: 'Medicines', v: meds.length, s: 'items in master', cls: '' },
       { k: 'Disposables', v: disp.length, s: 'items in master', cls: '' },
@@ -48,6 +53,8 @@
       { k: 'Stock value', v: UI.money(value), s: 'medicines + disposables', cls: '' },
       { k: 'Below minimum', v: low, s: 'need indenting', cls: low ? 'warn' : 'good' },
       { k: 'Expiry alerts', v: exp.length, s: expired + ' already expired', cls: exp.length ? (expired ? 'bad' : 'warn') : 'good' },
+      { k: 'Prescriptions', v: rxMonth.length, s: medsIssued + ' medicine lines this month', cls: '' },
+      { k: 'Referrals', v: refMonth.length, s: 'this month', cls: '' },
       { k: 'Last month closed', v: lastClosed ? Store.monthName(lastClosed) : '—', s: 'monthly register', cls: lastClosed === Store.prevMonth(Store.currentMonth()) || lastClosed === Store.currentMonth() ? 'good' : 'warn' }
     ];
 
@@ -184,6 +191,33 @@
     UI.download('stock-transactions.csv', UI.toCsv(rows), 'text/csv');
   }
 
+  function csvRx() {
+    var rows = [['Date', 'Prescription No', 'Patient', 'Age', 'Sex', 'Problem / Diagnosis',
+      'Prescribed by', 'Medicine', 'Quantity', 'Unit', 'Dosage', 'Remarks']];
+    Store.rxList().forEach(function (r) {
+      if (!r.lines || !r.lines.length) {
+        rows.push([r.date, r.no, r.patient, r.age, r.sex, r.problem, r.doctor, '', '', '', '', r.remarks]);
+        return;
+      }
+      r.lines.forEach(function (l) {
+        var it = Store.item(l.itemId) || {};
+        rows.push([r.date, r.no, r.patient, r.age, r.sex, r.problem, r.doctor,
+          it.name || '(deleted item)', l.qty, it.unit, l.dose, r.remarks]);
+      });
+    });
+    UI.download('prescriptions.csv', UI.toCsv(rows), 'text/csv');
+  }
+
+  function csvReferrals() {
+    var rows = [['Date', 'Slip No', 'Patient', 'Age', 'Sex', 'Referred to hospital',
+      'Under / Department', 'Reason', 'Accompanied by', 'Relation', 'Mode', 'Remarks']];
+    Store.referralList().forEach(function (r) {
+      rows.push([r.date, r.no, r.patient, r.age, r.sex, r.hospital, r.referredTo,
+        r.reason, r.escort, r.relation, r.mode, r.remarks]);
+    });
+    UI.download('referrals.csv', UI.toCsv(rows), 'text/csv');
+  }
+
   /* ---------------- sample data ---------------- */
 
   function sample() {
@@ -247,6 +281,45 @@
       cost: 450, nextDue: shift(-2), remarks: 'Cuff leaking — pending'
     });
 
+    // a few OP prescriptions — these issue their medicines from stock
+    [
+      { patient: 'Lakshmi Menon', age: '46 y', sex: 'Female', problem: 'Fever with body ache',
+        doctor: 'Dr. S. Menon', d: 5,
+        lines: [{ i: 0, qty: 2, dose: '1-0-1 for 3 days' }, { i: 2, qty: 3, dose: 'SOS' }] },
+      { patient: 'Rajan P.', age: '61 y', sex: 'Male', problem: 'Sore throat, productive cough',
+        doctor: 'Dr. S. Menon', d: 8,
+        lines: [{ i: 1, qty: 1, dose: '1-1-1 for 5 days' }, { i: 0, qty: 1, dose: 'SOS for fever' }] },
+      { patient: 'Aisha Beevi', age: '29 y', sex: 'Female', problem: 'Dressing — laceration on left forearm',
+        doctor: 'Dr. A. Thomas', d: 12,
+        lines: [{ i: 7, qty: 1, dose: 'Daily dressing' }, { i: 6, qty: 2, dose: '' }] }
+    ].forEach(function (r) {
+      Store.saveRx({
+        no: Store.nextRxNo(day(r.d)), date: day(r.d), patient: r.patient, age: r.age,
+        sex: r.sex, problem: r.problem, doctor: r.doctor, remarks: '',
+        lines: r.lines.map(function (l) {
+          return { itemId: made[l.i].id, qty: l.qty, dose: l.dose };
+        })
+      });
+    });
+
+    [
+      { patient: 'Rajan P.', age: '61 y', sex: 'Male', hospital: 'District Hospital, Alappuzha',
+        referredTo: 'Dept. of Medicine', reason: 'Uncontrolled hypertension, needs evaluation',
+        escort: 'Manoj R.', relation: 'Son', mode: 'Ambulance', d: 8 },
+      { patient: 'Baby of Sunitha', age: '8 m', sex: 'Female', hospital: 'Medical College Hospital',
+        referredTo: 'Paediatrics', reason: 'Persistent high fever, dehydration',
+        escort: 'Sunitha K.', relation: 'Mother', mode: 'Ambulance', d: 11 },
+      { patient: 'Devassy Joseph', age: '54 y', sex: 'Male', hospital: 'Taluk Hospital, Cherthala',
+        referredTo: 'Dept. of Surgery', reason: 'Suspected appendicitis',
+        escort: 'Mary Joseph', relation: 'Wife', mode: 'Own arrangement', d: 13 }
+    ].forEach(function (r) {
+      Store.saveReferral({
+        no: Store.nextReferralNo(day(r.d)), date: day(r.d), patient: r.patient, age: r.age,
+        sex: r.sex, hospital: r.hospital, referredTo: r.referredTo, reason: r.reason,
+        escort: r.escort, relation: r.relation, mode: r.mode, remarks: ''
+      });
+    });
+
     refresh();
     UI.toast('Sample data loaded');
     go('dashboard');
@@ -284,6 +357,8 @@
       case 'txns': Txns.refreshSelect(); Txns.render(); break;
       case 'monthly': Monthly.render(); break;
       case 'maint': Maint.refreshSelect(); Maint.render(); break;
+      case 'rx': Rx.refreshSelects(); Rx.render(); break;
+      case 'referrals': Referrals.render(); break;
       case 'reports': Reports.render(); break;
       case 'settings': loadSettings(); break;
     }
@@ -330,6 +405,8 @@
       switch (cmd) {
         case 'new-item': go('items'); Items.open(null); break;
         case 'new-txn': go('txns'); break;
+        case 'new-rx': go('rx'); Rx.reset(); break;
+        case 'new-referral': go('referrals'); Referrals.reset(); break;
         case 'print':
           if (current !== 'reports') Reports.openWith('monthly-all');
           setTimeout(function () { global.print(); }, 120);
@@ -363,6 +440,8 @@
     Txns.init();
     Monthly.init();
     Maint.init();
+    Rx.init();
+    Referrals.init();
     Reports.init();
 
     UI.$$('.nav-item').forEach(function (b) {
@@ -384,6 +463,8 @@
     });
     UI.$('#btnCsvItems').addEventListener('click', csvItems);
     UI.$('#btnCsvTxns').addEventListener('click', csvTxns);
+    UI.$('#btnCsvRx').addEventListener('click', csvRx);
+    UI.$('#btnCsvReferrals').addEventListener('click', csvReferrals);
     UI.$('#btnSample').addEventListener('click', sample);
     UI.$('#btnWipe').addEventListener('click', wipe);
 

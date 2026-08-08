@@ -368,3 +368,57 @@ ol.guide b { color: var(--ink); }
 
 /* the native menu already owns these shortcuts in the desktop build */
 body.is-desktop .search::-webkit-search-cancel-button { cursor: pointer; }
+
+/* ---------------- prescription lines ---------------- */
+
+.rx-block {
+  grid-column: 1 / -1;
+  border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 12px 14px 14px; background: #fbfcfd;
+}
+.rx-block-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  gap: 12px; flex-wrap: wrap; margin-bottom: 10px;
+}
+.rx-block-head > span:first-child { font-size: 12px; font-weight: 600; color: var(--ink-2); }
+.rx-block-head b { color: var(--bad); }
+.rx-block-head .hint { font-size: 11.5px; color: var(--ink-3); }
+
+.rx-line {
+  display: grid;
+  grid-template-columns: minmax(180px, 2.2fr) 90px minmax(150px, 1.6fr) 118px 32px;
+  gap: 8px; align-items: center; margin-bottom: 7px;
+}
+.rx-line-head {
+  margin-bottom: 6px; font-size: 11px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .4px; color: var(--ink-3);
+}
+.rx-line-head span { padding: 0 2px; }
+.rx-line select, .rx-line input {
+  border: 1px solid var(--line); background: #fff; color: var(--ink);
+  padding: 7px 9px; border-radius: 7px; font: inherit; font-size: 13px;
+  width: 100%; min-width: 0;
+}
+.rx-line select:focus, .rx-line input:focus {
+  outline: 2px solid var(--brand-soft); border-color: var(--brand-2);
+}
+.rx-line .rx-qty { text-align: right; font-variant-numeric: tabular-nums; }
+.rx-stock { font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rx-del { justify-self: center; }
+
+@media (max-width: 900px) {
+  .rx-line { grid-template-columns: 1fr 1fr; }
+  .rx-line-head { display: none; }
+}
+
+tr.row-editing { background: var(--brand-soft) !important; }
+
+.chip-rx { background: #efe7fb; color: #5b3a9e; }
+
+.inline-fld { display: inline-flex; align-items: center; gap: 8px; }
+.inline-fld > span { font-size: 12px; font-weight: 600; color: var(--ink-2); }
+.inline-fld input {
+  border: 1px solid var(--line); background: #fff; color: var(--ink);
+  padding: 7px 10px; border-radius: 8px; font: inherit; font-size: 13px;
+}
+.inline-fld input:focus { outline: 2px solid var(--brand-soft); border-color: var(--brand-2); }

@@ -4,6 +4,10 @@ A stock-keeping app for a medical centre — medicines, disposable items and
 permanent assets — with a monthly stock update and printable A4 report sheets
 that can be pasted straight into the physical register.
 
+It also keeps the **prescription register**, where the medicines written for a
+patient are issued from stock automatically, and the **referral register** of
+patients sent on to other hospitals.
+
 It runs offline. Nothing is sent anywhere, no server is involved and no
 internet connection is needed.
 
@@ -18,8 +22,8 @@ Download from the [**Releases**](../../releases) page:
 
 | File | What it is |
 |---|---|
-| `MedicalCentreStockRegister-Setup-1.0.0.exe` | **Installer.** Run it, click through, and the app appears on the Desktop and in the Start Menu. No administrator rights needed. |
-| `MedicalCentreStockRegister-Portable-1.0.0.exe` | **Portable.** Runs straight from a pen drive. Nothing is installed. |
+| `MedicalCentreStockRegister-Setup-*.exe` | **Installer.** Run it, click through, and the app appears on the Desktop and in the Start Menu. No administrator rights needed. |
+| `MedicalCentreStockRegister-Portable-*.exe` | **Portable.** Runs straight from a pen drive. Nothing is installed. |
 
 When you first run it Windows SmartScreen will say *"Windows protected your
 PC"* because the app is not code-signed (a signing certificate has to be bought
@@ -56,10 +60,12 @@ survive an uninstall or a reinstall.
 |---|---|
 | `Ctrl+N` | Add item |
 | `Ctrl+E` | Record receipt / issue |
+| `Ctrl+R` | New prescription |
+| `Ctrl+D` | New referral |
 | `Ctrl+B` | Save backup |
 | `Ctrl+P` | Print report |
 | `Ctrl+Shift+P` | Save report as PDF |
-| `Ctrl+1` … `Ctrl+7` | Jump to a screen |
+| `Ctrl+1` … `Ctrl+9` | Jump to a screen |
 
 ---
 
@@ -79,6 +85,8 @@ further down.
 | Once, at the start | Enter every item with its **opening stock** | Item Master |
 | Whenever stock arrives | Record a **Receipt** with the bill number | Receipt / Issue |
 | Whenever stock goes out | Record an **Issue** with the department / indent number | Receipt / Issue |
+| Whenever a patient is given medicines | Record the **prescription** — the medicines come off the stock by themselves | Prescriptions |
+| Whenever a patient is sent to another hospital | Record the **referral slip** | Referrals |
 | When something expires or breaks | Record it as **Expired / Damaged** | Receipt / Issue |
 | End of every month | Count the shelves, enter the **physical count**, press **Close & Save Month** | Monthly Stock |
 | After closing | Print the register sheet and paste it in the register | Print Reports |
@@ -121,6 +129,38 @@ batch, expiry and rate from the item master, and warns before an issue would
 push the balance below zero. A receipt with a new batch or expiry updates the
 item master automatically.
 
+### Prescriptions
+The out-patient register. For each patient you record the date, an
+automatically numbered prescription number (`OP/<year>/0001`, editable), the
+patient's name, age and sex, a brief description of the problem or diagnosis,
+who prescribed it, and then one line per medicine — item, quantity and the
+dosage instruction.
+
+**Saving issues those medicines from stock automatically.** Each prescribed
+line becomes an ordinary issue entry, so it flows straight into the stock
+ledger, the monthly closing and every report. The stock in hand is shown
+beside each line as you pick it, and you are warned before prescribing more
+than is on the shelf.
+
+Editing a prescription re-issues it correctly: reduce a quantity from 5 to 2
+and the 3 go back on the shelf; remove a line and its whole quantity returns.
+Deleting a prescription returns everything it issued. This works because the
+issue entries are tied to the prescription and rewritten from it on every
+save — the two can never drift apart.
+
+For the same reason, an issue created by a prescription is marked `℞` on the
+Receipt / Issue screen and cannot be deleted there; edit the prescription
+instead, so the patient record and the stock always agree.
+
+### Referrals
+The register of patients referred out. Records the referral slip number
+(automatically numbered `REF/<year>/0001`, editable), date, patient name, age
+and sex, the hospital referred to, the doctor or department, the reason for
+the referral, the person accompanying the patient and their relation, and the
+mode of transport.
+
+Both registers can be filtered by month, searched by any field, and printed.
+
 ### Monthly Stock
 Pick a month and the table shows, for every item:
 
@@ -158,6 +198,8 @@ store keeper, the verifier and the medical officer:
 * Asset Maintenance Register
 * Item Stock Ledger (one item, one month)
 * Receipt & Issue Day Book
+* Prescription Register (OP) — by month
+* Referral Register — by month
 
 Press **Print** and choose *A4*, *Landscape* in the browser's print dialog.
 Turning on "Background graphics" keeps the shading on the heading row.
@@ -169,7 +211,9 @@ in days, and the currency symbol. Also:
 
 * **Export backup (.json)** — the whole register in one file.
 * **Restore from backup** — replaces everything currently in the browser.
-* **Export items / transactions (.csv)** — opens in Excel or LibreOffice.
+* **Export items / transactions / prescriptions / referrals (.csv)** — opens in
+  Excel or LibreOffice. The prescription export has one row per medicine, so it
+  can be pivoted or totalled easily.
 
 ---
 
@@ -207,6 +251,8 @@ assets/js/items.js         Item Master
 assets/js/transactions.js  Receipt / Issue
 assets/js/monthly.js       monthly closing
 assets/js/maintenance.js   asset maintenance
+assets/js/prescriptions.js prescription register + automatic issue
+assets/js/referrals.js     referral register
 assets/js/reports.js       printable reports
 assets/js/app.js           routing, dashboard, settings, backup
 

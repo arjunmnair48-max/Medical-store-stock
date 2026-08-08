@@ -99,9 +99,18 @@
     }).join('\r\n');
   }
 
-  /** builds an option list of items for a <select> */
+  /**
+   * Builds an option list of items for a <select>.
+   * `category` may also be 'consumable', meaning everything that is issued
+   * to patients — medicines and disposables, but not permanent assets.
+   */
   function itemOptions(select, category, selectedId) {
-    var list = Store.items(category || 'all');
+    var list;
+    if (category === 'consumable') {
+      list = Store.items().filter(function (i) { return i.category !== 'asset'; });
+    } else {
+      list = Store.items(category || 'all');
+    }
     var html = '<option value="">— select —</option>';
     ['medicine', 'disposable', 'asset'].forEach(function (cat) {
       var sub = list.filter(function (i) { return i.category === cat; });

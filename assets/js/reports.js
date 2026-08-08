@@ -357,6 +357,88 @@
       table(cols, rows, { blanks: 5 }) + footer();
   }
 
+  function rxRegister(month) {
+    var cols = [
+      { label: 'Sl.', w: '4%', align: 'center' },
+      { label: 'Date', w: '8%', align: 'center' },
+      { label: 'Prescription No.', w: '11%' },
+      { label: 'Name of patient', w: '17%' },
+      { label: 'Age / Sex', w: '8%', align: 'center' },
+      { label: 'Problem / Diagnosis', w: '19%' },
+      { label: 'Medicines issued', w: '23%' },
+      { label: 'Prescribed by', w: '10%' }
+    ];
+
+    var list = Store.rxList({ month: month }).slice().reverse();
+    var rows = [], sl = 0, medCount = 0;
+
+    list.forEach(function (r) {
+      sl++;
+      var meds = (r.lines || []).map(function (l) {
+        var it = Store.item(l.itemId);
+        medCount += 1;
+        return esc(it ? it.name : '(deleted item)') + ' — ' + num(l.qty) +
+          (it && it.unit ? ' ' + esc(it.unit) : '') +
+          (l.dose ? ' <span class="rp-dim">(' + esc(l.dose) + ')</span>' : '');
+      }).join('<br>') || '<span class="rp-dim">—</span>';
+
+      rows.push([
+        sl, dmy(r.date), esc(r.no || '—'),
+        '<b>' + esc(r.patient || '') + '</b>',
+        esc([r.age, r.sex].filter(Boolean).join(' / ')) || '—',
+        esc(r.problem || '—'),
+        meds,
+        esc(r.doctor || '—')
+      ]);
+    });
+
+    return header('Prescription Register — Out-Patients', Store.monthName(month)) +
+      table(cols, rows, {
+        blanks: 4,
+        total: ['', '', 'TOTAL', sl + ' patients', '', '', medCount + ' medicine lines issued', '']
+      }) +
+      footer('Medicines shown above have been issued from the stock and are accounted for in the monthly stock register.');
+  }
+
+  function referralRegister(month) {
+    var cols = [
+      { label: 'Sl.', w: '4%', align: 'center' },
+      { label: 'Date', w: '8%', align: 'center' },
+      { label: 'Slip No.', w: '10%' },
+      { label: 'Name of patient', w: '15%' },
+      { label: 'Age / Sex', w: '7%', align: 'center' },
+      { label: 'Referred to (hospital)', w: '17%' },
+      { label: 'Under / Dept.', w: '11%' },
+      { label: 'Reason for referral', w: '15%' },
+      { label: 'Accompanied by (relation)', w: '13%' }
+    ];
+
+    var list = Store.referralList({ month: month }).slice().reverse();
+    var rows = [], sl = 0;
+
+    list.forEach(function (r) {
+      sl++;
+      var escort = r.escort ? esc(r.escort) +
+        (r.relation ? ' <span class="rp-dim">(' + esc(r.relation) + ')</span>' : '') : '—';
+      rows.push([
+        sl, dmy(r.date), esc(r.no || '—'),
+        '<b>' + esc(r.patient || '') + '</b>',
+        esc([r.age, r.sex].filter(Boolean).join(' / ')) || '—',
+        esc(r.hospital || '—'),
+        esc(r.referredTo || '—'),
+        esc(r.reason || '—') + (r.mode ? '<br><span class="rp-dim">' + esc(r.mode) + '</span>' : ''),
+        escort
+      ]);
+    });
+
+    return header('Referral Register', Store.monthName(month)) +
+      table(cols, rows, {
+        blanks: 5,
+        total: ['', '', 'TOTAL', sl + ' patients referred', '', '', '', '', '']
+      }) +
+      footer();
+  }
+
   /* ---------------- controller ---------------- */
 
   function build(type, month, itemId) {
@@ -370,13 +452,18 @@
       case 'expiry': return expiryReport();
       case 'indent': return indentList();
       case 'maint': return maintReport();
+      case 'rx-register': return rxRegister(month);
+      case 'referral-register': return referralRegister(month);
       case 'ledger': return ledger(itemId, month);
       case 'daybook': return daybook(month);
       default: return '';
     }
   }
 
-  function needsMonth(t) { return t.indexOf('monthly') === 0 || t === 'ledger' || t === 'daybook'; }
+  function needsMonth(t) {
+    return t.indexOf('monthly') === 0 || t === 'ledger' || t === 'daybook' ||
+      t === 'rx-register' || t === 'referral-register';
+  }
   function needsItem(t) { return t === 'ledger'; }
 
   function syncPickers() {

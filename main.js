@@ -183,6 +183,8 @@ function buildMenu() {
       submenu: [
         { label: 'Add Item…', accelerator: 'CmdOrCtrl+N', click: () => send('menu', 'new-item') },
         { label: 'Record Receipt / Issue', accelerator: 'CmdOrCtrl+E', click: () => send('menu', 'new-txn') },
+        { label: 'New Prescription', accelerator: 'CmdOrCtrl+R', click: () => send('menu', 'new-rx') },
+        { label: 'New Referral', accelerator: 'CmdOrCtrl+D', click: () => send('menu', 'new-referral') },
         { type: 'separator' },
         { label: 'Save Backup…', accelerator: 'CmdOrCtrl+B', click: exportBackup },
         { label: 'Restore from Backup…', click: importBackup },
@@ -200,10 +202,12 @@ function buildMenu() {
         { label: 'Dashboard', accelerator: 'CmdOrCtrl+1', click: () => send('menu', 'go:dashboard') },
         { label: 'Item Master', accelerator: 'CmdOrCtrl+2', click: () => send('menu', 'go:items') },
         { label: 'Receipt / Issue', accelerator: 'CmdOrCtrl+3', click: () => send('menu', 'go:txns') },
-        { label: 'Monthly Stock', accelerator: 'CmdOrCtrl+4', click: () => send('menu', 'go:monthly') },
-        { label: 'Asset Maintenance', accelerator: 'CmdOrCtrl+5', click: () => send('menu', 'go:maint') },
-        { label: 'Print Reports', accelerator: 'CmdOrCtrl+6', click: () => send('menu', 'go:reports') },
-        { label: 'Settings & Backup', accelerator: 'CmdOrCtrl+7', click: () => send('menu', 'go:settings') }
+        { label: 'Prescriptions', accelerator: 'CmdOrCtrl+4', click: () => send('menu', 'go:rx') },
+        { label: 'Referrals', accelerator: 'CmdOrCtrl+5', click: () => send('menu', 'go:referrals') },
+        { label: 'Monthly Stock', accelerator: 'CmdOrCtrl+6', click: () => send('menu', 'go:monthly') },
+        { label: 'Asset Maintenance', accelerator: 'CmdOrCtrl+7', click: () => send('menu', 'go:maint') },
+        { label: 'Print Reports', accelerator: 'CmdOrCtrl+8', click: () => send('menu', 'go:reports') },
+        { label: 'Settings & Backup', accelerator: 'CmdOrCtrl+9', click: () => send('menu', 'go:settings') }
       ]
     },
     {

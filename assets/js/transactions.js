@@ -113,8 +113,11 @@
         '<td>' + UI.esc(tx.party || '—') + '</td>' +
         '<td>' + UI.esc(tx.batchNo || '—') + '</td>' +
         '<td class="dim">' + UI.esc(tx.remarks || '') + '</td>' +
-        '<td class="row-act"><button class="link danger" data-del="' + UI.esc(tx.id) + '">Delete</button></td>' +
-        '</tr>';
+        '<td class="row-act">' + (tx.rxId
+          ? '<span class="chip chip-rx" title="Issued by a prescription — edit it there">℞ ' +
+            UI.esc(tx.ref || 'prescription') + '</span>'
+          : '<button class="link danger" data-del="' + UI.esc(tx.id) + '">Delete</button>') +
+        '</td></tr>';
     });
 
     t.innerHTML = html + '</tbody>';
@@ -160,6 +163,13 @@
     UI.$('#txnTable').addEventListener('click', function (e) {
       var b = e.target.closest('[data-del]');
       if (!b) return;
+      var tx = Store.txns().filter(function (t) { return t.id === b.dataset.del; })[0];
+      if (tx && tx.rxId) {
+        alert('This issue belongs to prescription ' + (tx.ref || '') +
+          '.\n\nOpen the Prescriptions screen and edit or delete the prescription there, ' +
+          'so the patient record and the stock stay in step.');
+        return;
+      }
       if (!confirm('Delete this entry? The stock balance will be recalculated.')) return;
       Store.deleteTxn(b.dataset.del);
       render();

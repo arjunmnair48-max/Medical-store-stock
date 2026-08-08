@@ -20,7 +20,9 @@
     items: [],
     txns: [],
     closings: [],   // { id, month:'YYYY-MM', itemId, opening, receipts, issues, writeOff, adjust, book, physical, remarks, closedAt }
-    maint: []       // { id, itemId, date, type, doneBy, cost, nextDue, remarks }
+    maint: [],      // { id, itemId, date, type, doneBy, cost, nextDue, remarks }
+    rx: [],         // prescriptions — { id, no, date, patient, age, sex, problem, doctor, remarks, lines:[{itemId, qty, dose}] }
+    referrals: []   // { id, no, date, patient, age, sex, hospital, referredTo, reason, escort, relation, mode, remarks }
   };
 
   var db = null;
@@ -158,6 +160,11 @@
     d.txns = d.txns.filter(function (t) { return t.itemId !== id; });
     d.closings = d.closings.filter(function (c) { return c.itemId !== id; });
     d.maint = d.maint.filter(function (m) { return m.itemId !== id; });
+    // drop the item from any prescription that had prescribed it, so no
+    // prescription is left pointing at something that no longer exists
+    d.rx.forEach(function (r) {
+      r.lines = (r.lines || []).filter(function (l) { return l.itemId !== id; });
+    });
     save();
   }
 
@@ -338,6 +345,140 @@
     save();
   }
 
+  /* ---------------- prescriptions (OP register) ---------------- */
+
+  function rxList(filter) {
+    var list = load().rx.slice();
+    if (filter && filter.month) list = list.filter(function (r) { return toMonth(r.date) === filter.month; });
+    return list.sort(function (a, b) {
+      if (a.date === b.date) return (b.createdAt || '').localeCompare(a.createdAt || '');
+      return (b.date || '').localeCompare(a.date || '');
+    });
+  }
+
+  function rx(id) {
+    return load().rx.filter(function (r) { return r.id === id; })[0] || null;
+  }
+
+  /**
+   * Rewrites the issue entries belonging to one prescription.
+   *
+   * Every prescribed line becomes an ordinary OUT transaction carrying the
+   * prescription's id, so the stock ledger, the monthly closing and the
+   * reports all see it as a normal issue. Rebuilding from scratch on every
+   * save is what keeps the stock correct when a prescription is edited —
+   * changed quantities and removed lines cannot leave a stale deduction
+   * behind.
+   */
+  function syncRxTxns(record) {
+    var d = load();
+    d.txns = d.txns.filter(function (t) { return t.rxId !== record.id; });
+    (record.lines || []).forEach(function (line) {
+      var qty = Math.abs(Number(line.qty) || 0);
+      if (!line.itemId || !qty) return;
+      var it = item(line.itemId) || {};
+      d.txns.push({
+        id: uid(),
+        rxId: record.id,
+        itemId: line.itemId,
+        date: record.date,
+        type: 'OUT',
+        qty: qty,
+        ref: record.no || '',
+        party: record.patient || '',
+        batchNo: it.batchNo || '',
+        expiry: it.expiry || '',
+        rate: it.rate || '',
+        remarks: line.dose || '',
+        createdAt: new Date().toISOString()
+      });
+    });
+  }
+
+  function saveRx(obj) {
+    var d = load();
+    if (obj.id) {
+      for (var i = 0; i < d.rx.length; i++) {
+        if (d.rx[i].id === obj.id) { d.rx[i] = obj; break; }
+      }
+    } else {
+      obj.id = uid();
+      obj.createdAt = new Date().toISOString();
+      d.rx.push(obj);
+    }
+    syncRxTxns(obj);
+    save();
+    return obj;
+  }
+
+  function deleteRx(id) {
+    var d = load();
+    d.rx = d.rx.filter(function (r) { return r.id !== id; });
+    d.txns = d.txns.filter(function (t) { return t.rxId !== id; });   // give the stock back
+    save();
+  }
+
+  /** Next serial in the form OP/<year>/0001, continuing the highest used. */
+  function nextRxNo(date) {
+    var year = (date || new Date().toISOString()).slice(0, 4);
+    var prefix = 'OP/' + year + '/';
+    var max = 0;
+    load().rx.forEach(function (r) {
+      if (!r.no || r.no.indexOf(prefix) !== 0) return;
+      var n = parseInt(r.no.slice(prefix.length), 10);
+      if (isFinite(n) && n > max) max = n;
+    });
+    return prefix + String(max + 1).padStart(4, '0');
+  }
+
+  /* ---------------- referrals ---------------- */
+
+  function referralList(filter) {
+    var list = load().referrals.slice();
+    if (filter && filter.month) list = list.filter(function (r) { return toMonth(r.date) === filter.month; });
+    return list.sort(function (a, b) {
+      if (a.date === b.date) return (b.createdAt || '').localeCompare(a.createdAt || '');
+      return (b.date || '').localeCompare(a.date || '');
+    });
+  }
+
+  function referral(id) {
+    return load().referrals.filter(function (r) { return r.id === id; })[0] || null;
+  }
+
+  function saveReferral(obj) {
+    var d = load();
+    if (obj.id) {
+      for (var i = 0; i < d.referrals.length; i++) {
+        if (d.referrals[i].id === obj.id) { d.referrals[i] = obj; break; }
+      }
+    } else {
+      obj.id = uid();
+      obj.createdAt = new Date().toISOString();
+      d.referrals.push(obj);
+    }
+    save();
+    return obj;
+  }
+
+  function deleteReferral(id) {
+    var d = load();
+    d.referrals = d.referrals.filter(function (r) { return r.id !== id; });
+    save();
+  }
+
+  function nextReferralNo(date) {
+    var year = (date || new Date().toISOString()).slice(0, 4);
+    var prefix = 'REF/' + year + '/';
+    var max = 0;
+    load().referrals.forEach(function (r) {
+      if (!r.no || r.no.indexOf(prefix) !== 0) return;
+      var n = parseInt(r.no.slice(prefix.length), 10);
+      if (isFinite(n) && n > max) max = n;
+    });
+    return prefix + String(max + 1).padStart(4, '0');
+  }
+
   /* ---------------- alerts ---------------- */
 
   function lowStock() {
@@ -416,6 +557,11 @@
     isMonthClosed: isMonthClosed,
 
     maint: maint, saveMaint: saveMaint, deleteMaint: deleteMaint,
+
+    rxList: rxList, rx: rx, saveRx: saveRx, deleteRx: deleteRx, nextRxNo: nextRxNo,
+
+    referralList: referralList, referral: referral, saveReferral: saveReferral,
+    deleteReferral: deleteReferral, nextReferralNo: nextReferralNo,
 
     lowStock: lowStock, expiring: expiring, maintDue: maintDue,
 
