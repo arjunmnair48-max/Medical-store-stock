@@ -591,6 +591,8 @@
           <option value="referral-register">Referral Register</option>
           <option value="firstaid">First Aid Box Check Sheet (all boxes)</option>
           <option value="firstaid-movement">First Aid Box Movement Register</option>
+          <option value="rx-slip">Prescription Slip (one patient)</option>
+          <option value="referral-slip">Referral Slip (one patient)</option>
               <option value="ledger">Item Ledger (single item)</option>
               <option value="daybook">Receipt &amp; Issue Day Book</option>
             </select>
@@ -602,6 +604,10 @@
           <label class="fld hidden" id="repItemWrap">
             <span>Item</span>
             <select id="reportItem"></select>
+          </label>
+          <label class="fld hidden" id="repRecordWrap">
+            <span id="repRecordLabel">Record</span>
+            <select id="reportRecord"></select>
           </label>
           <div class="form-actions">
             <button class="btn" id="btnBuildReport">Preview</button>

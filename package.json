@@ -1,7 +1,7 @@
 {
   "name": "medical-centre-stock-register",
   "productName": "Medical Centre Stock Register",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Stock register for a medical centre \u2014 medicines, disposable items, permanent assets and first aid boxes \u2014 with prescriptions that auto-deduct stock, a referral register, monthly closing and printable register sheets.",
   "main": "main.js",
   "author": {

@@ -163,6 +163,8 @@ the referral, the person accompanying the patient and their relation, and the
 mode of transport.
 
 Both registers can be filtered by month, searched by any field, and printed.
+Each row also has a **Slip** button, which prints that one patient's
+prescription or referral slip on an upright A4 sheet to hand over.
 
 ### First Aid Boxes
 Each first aid box is a small store of its own. The app starts with the five
@@ -242,8 +244,11 @@ store keeper, the verifier and the medical officer:
 * Referral Register — by month
 * First Aid Box Check Sheet — all boxes on one sheet
 * First Aid Box Movement Register — by month
+* Prescription Slip — one patient, A4 upright, to hand over with the medicines
+* Referral Slip — one patient, A4 upright, to carry to the other hospital
 
-Press **Print** and choose *A4*, *Landscape* in the browser's print dialog.
+The register sheets print *A4 landscape*; the two slips print *A4 upright* and
+switch by themselves. Press **Print** and check the orientation matches.
 Turning on "Background graphics" keeps the shading on the heading row.
 Choosing *Save as PDF* instead of a printer keeps a soft copy.
 

@@ -530,9 +530,102 @@
       footer('Items filled into a box are issued from the main stock and appear in the monthly stock register.');
   }
 
+  /* ---------------- single slips, handed to the patient ---------------- */
+
+  function slipHead(title, no, date) {
+    var st = Store.settings();
+    return '<div class="slip-head">' +
+      '<div class="rp-centre">' + esc(st.centreName || 'Medical Centre') + '</div>' +
+      (st.address ? '<div class="rp-addr">' + esc(st.address) + '</div>' : '') +
+      '<div class="slip-title">' + esc(title) + '</div>' +
+      '</div>' +
+      '<div class="slip-meta">' +
+      '<span><b>No.</b> ' + esc(no || '—') + '</span>' +
+      '<span><b>Date</b> ' + dmy(date) + '</span>' +
+      '</div>';
+  }
+
+  function slipField(label, value, wide) {
+    return '<div class="slip-field' + (wide ? ' wide' : '') + '">' +
+      '<span class="slip-label">' + esc(label) + '</span>' +
+      '<span class="slip-value">' + (value || '&nbsp;') + '</span></div>';
+  }
+
+  function rxSlip(id) {
+    var r = Store.rx(id);
+    if (!r) return '<div class="rp-empty-page">Choose a prescription to print.</div>';
+    var st = Store.settings();
+
+    var meds = (r.lines || []).map(function (l, i) {
+      var it = Store.item(l.itemId);
+      return '<tr>' +
+        '<td class="ta-center">' + (i + 1) + '</td>' +
+        '<td><b>' + esc(it ? it.name : '(deleted item)') + '</b>' +
+        (it && it.spec ? ' <span class="rp-dim">' + esc(it.spec) + '</span>' : '') + '</td>' +
+        '<td class="ta-right">' + num(l.qty) + (it && it.unit ? ' ' + esc(it.unit) : '') + '</td>' +
+        '<td>' + esc(l.dose || '') + '</td></tr>';
+    }).join('');
+
+    var blanks = '';
+    for (var i = (r.lines || []).length; i < 6; i++) {
+      blanks += '<tr class="rp-blank"><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>';
+    }
+
+    return slipHead('Prescription', r.no, r.date) +
+      '<div class="slip-grid">' +
+      slipField('Name of patient', '<b>' + esc(r.patient || '') + '</b>', true) +
+      slipField('Age', esc(r.age || '')) +
+      slipField('Sex', esc(r.sex || '')) +
+      slipField('Complaint / Diagnosis', esc(r.problem || ''), true) +
+      '</div>' +
+      '<table class="rp-table slip-table"><thead><tr>' +
+      '<th style="width:7%" class="ta-center">Sl.</th>' +
+      '<th style="width:45%">Medicine</th>' +
+      '<th style="width:15%" class="ta-right">Quantity</th>' +
+      '<th style="width:33%">Dosage / Instructions</th>' +
+      '</tr></thead><tbody>' + meds + blanks + '</tbody></table>' +
+      (r.remarks ? '<div class="slip-note"><b>Remarks:</b> ' + esc(r.remarks) + '</div>' : '') +
+      '<div class="slip-sign">' +
+      '<div class="sign-box"><div class="sign-line"></div><div>Medicines received by (patient)</div></div>' +
+      '<div class="sign-box"><div class="sign-line"></div><div>' +
+      esc(r.doctor || 'Prescribed by') + '</div>' +
+      '<div class="sign-name">' + esc(r.doctor ? '' : (st.officer || '')) + '</div></div>' +
+      '</div>';
+  }
+
+  function referralSlip(id) {
+    var r = Store.referral(id);
+    if (!r) return '<div class="rp-empty-page">Choose a referral to print.</div>';
+    var st = Store.settings();
+
+    return slipHead('Referral Slip', r.no, r.date) +
+      '<div class="slip-to">To,<br><b>' + esc(r.hospital || '') + '</b>' +
+      (r.referredTo ? '<br>' + esc(r.referredTo) : '') + '</div>' +
+      '<div class="slip-grid">' +
+      slipField('Name of patient', '<b>' + esc(r.patient || '') + '</b>', true) +
+      slipField('Age', esc(r.age || '')) +
+      slipField('Sex', esc(r.sex || '')) +
+      '</div>' +
+      '<div class="slip-block"><span class="slip-label">Reason for referral / brief history</span>' +
+      '<div class="slip-box">' + esc(r.reason || '') + '</div></div>' +
+      '<div class="slip-grid">' +
+      slipField('Accompanied by', esc(r.escort || '')) +
+      slipField('Relation to patient', esc(r.relation || '')) +
+      slipField('Mode of transport', esc(r.mode || '')) +
+      slipField('Remarks', esc(r.remarks || '')) +
+      '</div>' +
+      '<div class="slip-note">Kindly do the needful. This patient is referred from this centre for ' +
+      'further management.</div>' +
+      '<div class="slip-sign">' +
+      '<div class="sign-box"><div class="sign-line"></div><div>Signature of patient / escort</div></div>' +
+      '<div class="sign-box"><div class="sign-line"></div><div>Medical Officer in charge</div>' +
+      '<div class="sign-name">' + esc(st.officer || '') + '</div></div>' +
+      '</div>';
+  }
+
   /* ---------------- controller ---------------- */
 
-  function build(type, month, itemId) {
+  function build(type, month, itemId, recordId) {
     bind();
     month = month || Store.currentMonth();
     switch (type) {
@@ -547,6 +640,8 @@
       case 'referral-register': return referralRegister(month);
       case 'firstaid': return firstAidSheet();
       case 'firstaid-movement': return firstAidMovement(month);
+      case 'rx-slip': return rxSlip(recordId);
+      case 'referral-slip': return referralSlip(recordId);
       case 'ledger': return ledger(itemId, month);
       case 'daybook': return daybook(month);
       default: return '';
@@ -558,17 +653,41 @@
       t === 'rx-register' || t === 'referral-register' || t === 'firstaid-movement';
   }
   function needsItem(t) { return t === 'ledger'; }
+  function needsRecord(t) { return t === 'rx-slip' || t === 'referral-slip'; }
+
+  /** The slips read better upright; every other sheet is wide. */
+  function isPortrait(t) { return needsRecord(t); }
+
+  /** Fills the record picker with prescriptions or referrals. */
+  function fillRecords() {
+    var t = UI.$('#reportType').value;
+    var sel = UI.$('#reportRecord');
+    if (!needsRecord(t)) { sel.innerHTML = ''; return; }
+    var keep = sel.value;
+    var list = t === 'rx-slip' ? Store.rxList() : Store.referralList();
+    UI.$('#repRecordLabel').textContent = t === 'rx-slip' ? 'Prescription' : 'Referral';
+    sel.innerHTML = list.length
+      ? list.map(function (r) {
+        return '<option value="' + esc(r.id) + '"' + (r.id === keep ? ' selected' : '') + '>' +
+          esc((r.no || '—') + ' · ' + UI.dmy(r.date) + ' · ' + (r.patient || '')) + '</option>';
+      }).join('')
+      : '<option value="">— nothing recorded yet —</option>';
+  }
 
   function syncPickers() {
     var t = UI.$('#reportType').value;
     UI.$('#repMonthWrap').classList.toggle('hidden', !needsMonth(t));
     UI.$('#repItemWrap').classList.toggle('hidden', !needsItem(t));
+    UI.$('#repRecordWrap').classList.toggle('hidden', !needsRecord(t));
+    fillRecords();
   }
 
   function show() {
     var t = UI.$('#reportType').value;
-    var html = build(t, UI.$('#reportMonth').value, UI.$('#reportItem').value);
-    UI.$('#reportArea').innerHTML = '<div class="sheet">' + html + '</div>';
+    var html = build(t, UI.$('#reportMonth').value, UI.$('#reportItem').value,
+      UI.$('#reportRecord').value);
+    UI.$('#reportArea').innerHTML =
+      '<div class="sheet' + (isPortrait(t) ? ' sheet-portrait' : '') + '">' + html + '</div>';
   }
 
   function init() {
@@ -577,6 +696,7 @@
     UI.$('#reportType').addEventListener('change', function () { syncPickers(); show(); });
     UI.$('#reportMonth').addEventListener('change', show);
     UI.$('#reportItem').addEventListener('change', show);
+    UI.$('#reportRecord').addEventListener('change', show);
     UI.$('#btnBuildReport').addEventListener('click', show);
     UI.$('#btnPrintReport').addEventListener('click', function () { show(); setTimeout(function () { window.print(); }, 60); });
     syncPickers();
@@ -584,7 +704,18 @@
 
   function render() {
     UI.itemOptions(UI.$('#reportItem'), 'all', UI.$('#reportItem').value);
+    fillRecords();
     show();
+  }
+
+  /** Jump straight to a slip for one record. */
+  function openSlip(type, recordId) {
+    App.go('reports');
+    UI.$('#reportType').value = type;
+    syncPickers();
+    UI.$('#reportRecord').value = recordId;
+    show();
+    UI.$('#reportArea').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   function openWith(type) {
@@ -594,6 +725,6 @@
     render();
   }
 
-  global.Reports = { init: init, render: render, build: build, openWith: openWith };
+  global.Reports = { init: init, render: render, build: build, openWith: openWith, openSlip: openSlip };
 
 })(window);

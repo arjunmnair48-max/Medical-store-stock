@@ -441,3 +441,46 @@ tr.row-editing { background: var(--brand-soft) !important; }
 }
 
 .chip-fab { background: #e3f1ec; color: #1a6b52; }
+
+/* ---------------- single slips ---------------- */
+
+.sheet-portrait { width: 210mm; min-height: 297mm; }
+@media (max-width: 900px) { .sheet-portrait { width: 100%; } }
+
+.slip-head { text-align: center; border-bottom: 2px solid #000; padding-bottom: 8px; }
+.slip-title {
+  font-size: 15px; font-weight: 700; margin-top: 8px;
+  letter-spacing: 2px; text-transform: uppercase;
+}
+.slip-meta {
+  display: flex; justify-content: space-between;
+  font-size: 11.5px; padding: 7px 2px; border-bottom: 1px solid #000; margin-bottom: 12px;
+}
+
+.slip-grid {
+  display: grid; grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 10px 14px; margin-bottom: 14px;
+}
+.slip-field { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.slip-field.wide { grid-column: span 2; }
+.slip-label {
+  font-size: 9.5px; text-transform: uppercase; letter-spacing: .5px; color: #555;
+}
+.slip-value {
+  font-size: 12px; border-bottom: 1px dotted #666; padding-bottom: 3px; min-height: 18px;
+}
+
+.slip-to { font-size: 12px; margin-bottom: 14px; line-height: 1.7; }
+.slip-block { margin-bottom: 14px; }
+.slip-box {
+  border: 1px solid #000; min-height: 58px; padding: 6px 8px;
+  font-size: 12px; margin-top: 3px;
+}
+.slip-table { margin-top: 4px; }
+.slip-table tr.rp-blank td { height: 21px; }
+.slip-note { font-size: 11px; margin-top: 12px; font-style: italic; }
+
+.slip-sign {
+  display: flex; justify-content: space-between; gap: 40px; margin-top: 46px;
+}
+.slip-sign .sign-box { flex: 1; text-align: center; font-size: 10.5px; }

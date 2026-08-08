@@ -114,6 +114,7 @@
         '<td>' + UI.esc(r.relation || '—') + '</td>' +
         '<td>' + UI.esc(r.mode || '—') + '</td>' +
         '<td class="row-act nowrap">' +
+        '<button class="link" data-slip="' + UI.esc(r.id) + '">Slip</button> ' +
         '<button class="link" data-edit="' + UI.esc(r.id) + '">Edit</button> ' +
         '<button class="link danger" data-del="' + UI.esc(r.id) + '">Delete</button></td>' +
         '</tr>';
@@ -143,6 +144,8 @@
     });
 
     UI.$('#refTable').addEventListener('click', function (e) {
+      var sl = e.target.closest('[data-slip]');
+      if (sl) { Reports.openSlip('referral-slip', sl.dataset.slip); return; }
       var ed = e.target.closest('[data-edit]');
       if (ed) { edit(ed.dataset.edit); render(); return; }
       var dl = e.target.closest('[data-del]');

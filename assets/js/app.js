@@ -172,8 +172,11 @@
       if (!data || !Array.isArray(data.items)) {
         UI.toast('That file is not a stock backup', 'bad'); return;
       }
+      var where = Store.backend === 'file' ? 'in this register' : 'in this browser';
       if (!confirm('Restore this backup?\n\n' + data.items.length + ' items, ' +
-        (data.txns || []).length + ' entries.\n\nEVERYTHING currently in this browser will be replaced.')) return;
+        (data.txns || []).length + ' entries, ' + (data.rx || []).length + ' prescriptions, ' +
+        (data.referrals || []).length + ' referrals.\n\nEVERYTHING currently ' + where +
+        ' will be replaced.')) return;
       Store.replaceAll(data);
       loadSettings();
       refresh();

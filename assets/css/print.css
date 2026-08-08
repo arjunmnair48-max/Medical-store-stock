@@ -64,3 +64,8 @@ table.rp-table tr.rp-total td {
 }
 
 a { text-decoration: none; color: #000; }
+
+/* the single slips print upright; the register sheets stay landscape */
+@page portrait { size: A4 portrait; margin: 12mm 12mm; }
+.sheet-portrait { page: portrait; }
+.slip-sign, .slip-block { page-break-inside: avoid; break-inside: avoid; }
