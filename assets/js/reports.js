@@ -439,6 +439,97 @@
       footer();
   }
 
+  function firstAidSheet() {
+    var cols = [
+      { label: 'Sl.', w: '5%', align: 'center' },
+      { label: 'Name of item', w: '27%' },
+      { label: 'Unit', w: '8%' },
+      { label: 'Required', w: '9%', align: 'right' },
+      { label: 'Found in box', w: '11%', align: 'right' },
+      { label: 'Short by', w: '9%', align: 'right' },
+      { label: 'Batch', w: '11%' },
+      { label: 'Expiry', w: '10%', align: 'center' },
+      { label: 'Remarks', w: '10%' }
+    ];
+
+    var today = new Date();
+    var out = header('First Aid Box Check Sheet',
+      'Contents verified as on ' + dmy(UI.today()));
+
+    var list = Store.boxes();
+    if (!list.length) {
+      return out + '<div class="rp-empty-page">No first aid boxes have been set up.</div>';
+    }
+
+    list.forEach(function (b) {
+      var rows = [], sl = 0;
+      Store.boxItems(b.id).forEach(function (r) {
+        sl++;
+        var short = r.required > 0 ? Math.max(0, r.required - r.inBox) : 0;
+        var note = '';
+        if (r.item.expiry) {
+          var y = +r.item.expiry.slice(0, 4), mo = +r.item.expiry.slice(5, 7);
+          if (new Date(y, mo, 0) < today && r.inBox > 0) note = '<b>EXPIRED — replace</b>';
+        }
+        rows.push([
+          sl,
+          '<b>' + esc(r.item.name) + '</b>' +
+          (r.item.spec ? ' <span class="rp-dim">' + esc(r.item.spec) + '</span>' : ''),
+          esc(r.item.unit || ''),
+          r.required > 0 ? num(r.required) : '—',
+          num(r.inBox),
+          short > 0 ? '<b>' + num(short) + '</b>' : '—',
+          esc(r.item.batchNo || '—'),
+          r.item.expiry ? dmy(r.item.expiry) : '—',
+          note
+        ]);
+      });
+
+      out += '<div class="rp-boxhead">' + esc(b.name) +
+        (b.location ? ' — ' + esc(b.location) : '') +
+        (b.incharge ? '  <span class="rp-dim">(in charge: ' + esc(b.incharge) + ')</span>' : '') +
+        '</div>' + table(cols, rows, { blanks: 3 });
+    });
+
+    return out + footer('Certified that the first aid boxes listed above have been ' +
+      'checked, the shortages made good and expired items replaced.');
+  }
+
+  function firstAidMovement(month) {
+    var cols = [
+      { label: 'Sl.', w: '4%', align: 'center' },
+      { label: 'Date', w: '9%', align: 'center' },
+      { label: 'Entry No.', w: '11%' },
+      { label: 'Box', w: '16%' },
+      { label: 'What happened', w: '16%' },
+      { label: 'Items', w: '24%' },
+      { label: 'By', w: '10%' },
+      { label: 'Remarks', w: '10%' }
+    ];
+
+    var list = Store.boxEntries({ month: month }).slice().reverse();
+    var rows = [], sl = 0;
+    list.forEach(function (e) {
+      sl++;
+      var b = Store.box(e.boxId);
+      var items = (e.lines || []).map(function (l) {
+        var it = Store.item(l.itemId);
+        return esc(it ? it.name : '(deleted item)') + ' — ' + num(l.qty) +
+          (it && it.unit ? ' ' + esc(it.unit) : '');
+      }).join('<br>') || '—';
+      rows.push([
+        sl, dmy(e.date), esc(e.no || '—'),
+        '<b>' + esc(b ? b.name : '(deleted box)') + '</b>',
+        esc(Store.BOX_TYPES[e.type] || e.type),
+        items, esc(e.by || '—'), esc(e.remarks || '')
+      ]);
+    });
+
+    return header('First Aid Box Movement Register', Store.monthName(month)) +
+      table(cols, rows, { blanks: 4, total: ['', '', 'TOTAL', sl + ' entries', '', '', '', ''] }) +
+      footer('Items filled into a box are issued from the main stock and appear in the monthly stock register.');
+  }
+
   /* ---------------- controller ---------------- */
 
   function build(type, month, itemId) {
@@ -454,6 +545,8 @@
       case 'maint': return maintReport();
       case 'rx-register': return rxRegister(month);
       case 'referral-register': return referralRegister(month);
+      case 'firstaid': return firstAidSheet();
+      case 'firstaid-movement': return firstAidMovement(month);
       case 'ledger': return ledger(itemId, month);
       case 'daybook': return daybook(month);
       default: return '';
@@ -462,7 +555,7 @@
 
   function needsMonth(t) {
     return t.indexOf('monthly') === 0 || t === 'ledger' || t === 'daybook' ||
-      t === 'rx-register' || t === 'referral-register';
+      t === 'rx-register' || t === 'referral-register' || t === 'firstaid-movement';
   }
   function needsItem(t) { return t === 'ledger'; }
 

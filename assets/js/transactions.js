@@ -116,7 +116,10 @@
         '<td class="row-act">' + (tx.rxId
           ? '<span class="chip chip-rx" title="Issued by a prescription — edit it there">℞ ' +
             UI.esc(tx.ref || 'prescription') + '</span>'
-          : '<button class="link danger" data-del="' + UI.esc(tx.id) + '">Delete</button>') +
+          : tx.boxEntryId
+            ? '<span class="chip chip-fab" title="First aid box entry — edit it there">✚ ' +
+              UI.esc(tx.ref || 'box') + '</span>'
+            : '<button class="link danger" data-del="' + UI.esc(tx.id) + '">Delete</button>') +
         '</td></tr>';
     });
 
@@ -168,6 +171,12 @@
         alert('This issue belongs to prescription ' + (tx.ref || '') +
           '.\n\nOpen the Prescriptions screen and edit or delete the prescription there, ' +
           'so the patient record and the stock stay in step.');
+        return;
+      }
+      if (tx && tx.boxEntryId) {
+        alert('This movement belongs to first aid box entry ' + (tx.ref || '') +
+          '.\n\nOpen the First Aid Boxes screen and edit or delete the entry there, ' +
+          'so the box contents and the stock stay in step.');
         return;
       }
       if (!confirm('Delete this entry? The stock balance will be recalculated.')) return;

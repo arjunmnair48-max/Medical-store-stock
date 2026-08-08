@@ -46,6 +46,10 @@
     var refMonth = Store.referralList({ month: m });
     var medsIssued = rxMonth.reduce(function (n, r) { return n + (r.lines || []).length; }, 0);
 
+    var fab = Store.boxAlerts();
+    var fabTotal = fab.length;
+    var fabProblem = fab.filter(function (b) { return b.shortOf || b.expired; }).length;
+
     var cards = [
       { k: 'Medicines', v: meds.length, s: 'items in master', cls: '' },
       { k: 'Disposables', v: disp.length, s: 'items in master', cls: '' },
@@ -55,6 +59,8 @@
       { k: 'Expiry alerts', v: exp.length, s: expired + ' already expired', cls: exp.length ? (expired ? 'bad' : 'warn') : 'good' },
       { k: 'Prescriptions', v: rxMonth.length, s: medsIssued + ' medicine lines this month', cls: '' },
       { k: 'Referrals', v: refMonth.length, s: 'this month', cls: '' },
+      { k: 'First aid boxes', v: fabTotal, s: fabProblem ? fabProblem + ' need attention' : 'all in order',
+        cls: fabProblem ? 'warn' : 'good' },
       { k: 'Last month closed', v: lastClosed ? Store.monthName(lastClosed) : '—', s: 'monthly register', cls: lastClosed === Store.prevMonth(Store.currentMonth()) || lastClosed === Store.currentMonth() ? 'good' : 'warn' }
     ];
 
@@ -106,6 +112,17 @@
         cls: over ? 'bad' : 'warn'
       };
     }), 'No maintenance due in the next 30 days.');
+
+    miniList(UI.$('#fabList'), Store.boxAlerts().map(function (b) {
+      var bad = b.expired > 0, warn = b.shortOf > 0;
+      return {
+        main: '<b>' + UI.esc(b.box.name) + '</b> <span class="dim">' +
+          UI.esc(b.box.location || '') + '</span>',
+        side: bad ? b.expired + ' expired' : warn ? b.shortOf + ' short' :
+          b.lines ? 'complete' : 'empty',
+        cls: bad ? 'bad' : warn ? 'warn' : b.lines ? 'good' : 'dim'
+      };
+    }), 'No first aid boxes set up.');
 
     miniList(UI.$('#recentList'), Store.txns().slice(0, 10).map(function (t) {
       var it = Store.item(t.itemId) || {};
@@ -218,6 +235,21 @@
     UI.download('referrals.csv', UI.toCsv(rows), 'text/csv');
   }
 
+  function csvBoxes() {
+    var rows = [['Box', 'Location', 'In charge', 'Item', 'Unit', 'Required', 'In box', 'Short by',
+      'Batch', 'Expiry']];
+    Store.boxes().forEach(function (b) {
+      var list = Store.boxItems(b.id);
+      if (!list.length) { rows.push([b.name, b.location, b.incharge, '(empty)', '', '', '', '', '', '']); return; }
+      list.forEach(function (r) {
+        var short = r.required > 0 ? Math.max(0, r.required - r.inBox) : 0;
+        rows.push([b.name, b.location, b.incharge, r.item.name, r.item.unit,
+          r.required || '', r.inBox, short || '', r.item.batchNo, r.item.expiry]);
+      });
+    });
+    UI.download('first-aid-boxes.csv', UI.toCsv(rows), 'text/csv');
+  }
+
   /* ---------------- sample data ---------------- */
 
   function sample() {
@@ -320,6 +352,38 @@
       });
     });
 
+    // stock two of the first aid boxes, and set a scale on the first
+    var boxes = Store.boxes();
+    if (boxes.length) {
+      var scale = [[5, 6], [6, 10], [7, 2], [0, 2]];   // syringe, gloves, cotton, paracetamol
+      scale.forEach(function (pair) {
+        Store.setBoxScale(boxes[0].id, made[pair[0]].id, pair[1]);
+      });
+      Store.saveBoxEntry({
+        no: Store.nextBoxNo(day(4)), date: day(4), boxId: boxes[0].id, type: 'FILL',
+        by: 'K. Ramesh', remarks: 'Monthly refill',
+        lines: scale.map(function (pair) {
+          return { itemId: made[pair[0]].id, qty: pair[1], remarks: '' };
+        })
+      });
+      Store.saveBoxEntry({
+        no: Store.nextBoxNo(day(9)), date: day(9), boxId: boxes[0].id, type: 'USE',
+        by: 'Security', remarks: 'Minor cut — workshop',
+        lines: [{ itemId: made[6].id, qty: 2, remarks: '' }, { itemId: made[7].id, qty: 1, remarks: '' }]
+      });
+    }
+    if (boxes.length > 4) {
+      Store.saveBoxEntry({
+        no: Store.nextBoxNo(day(6)), date: day(6), boxId: boxes[4].id, type: 'FILL',
+        by: 'K. Ramesh', remarks: 'Guest house box',
+        lines: [
+          { itemId: made[0].id, qty: 2, remarks: '' },
+          { itemId: made[6].id, qty: 6, remarks: '' },
+          { itemId: made[8].id, qty: 10, remarks: '' }
+        ]
+      });
+    }
+
     refresh();
     UI.toast('Sample data loaded');
     go('dashboard');
@@ -359,6 +423,7 @@
       case 'maint': Maint.refreshSelect(); Maint.render(); break;
       case 'rx': Rx.refreshSelects(); Rx.render(); break;
       case 'referrals': Referrals.render(); break;
+      case 'firstaid': FirstAid.render(); break;
       case 'reports': Reports.render(); break;
       case 'settings': loadSettings(); break;
     }
@@ -407,6 +472,7 @@
         case 'new-txn': go('txns'); break;
         case 'new-rx': go('rx'); Rx.reset(); break;
         case 'new-referral': go('referrals'); Referrals.reset(); break;
+        case 'new-box-entry': go('firstaid'); FirstAid.reset(); break;
         case 'print':
           if (current !== 'reports') Reports.openWith('monthly-all');
           setTimeout(function () { global.print(); }, 120);
@@ -442,6 +508,7 @@
     Maint.init();
     Rx.init();
     Referrals.init();
+    FirstAid.init();
     Reports.init();
 
     UI.$$('.nav-item').forEach(function (b) {
@@ -465,6 +532,7 @@
     UI.$('#btnCsvTxns').addEventListener('click', csvTxns);
     UI.$('#btnCsvRx').addEventListener('click', csvRx);
     UI.$('#btnCsvReferrals').addEventListener('click', csvReferrals);
+    UI.$('#btnCsvBoxes').addEventListener('click', csvBoxes);
     UI.$('#btnSample').addEventListener('click', sample);
     UI.$('#btnWipe').addEventListener('click', wipe);
 

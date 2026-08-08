@@ -27,6 +27,7 @@
       <button class="nav-item" data-view="txns"><span>⇄</span> Receipt / Issue</button>
       <button class="nav-item" data-view="rx"><span>℞</span> Prescriptions</button>
       <button class="nav-item" data-view="referrals"><span>➦</span> Referrals</button>
+      <button class="nav-item" data-view="firstaid"><span>✚</span> First Aid Boxes</button>
       <button class="nav-item" data-view="monthly"><span>▦</span> Monthly Stock</button>
       <button class="nav-item" data-view="maint"><span>⚙</span> Asset Maintenance</button>
       <button class="nav-item" data-view="reports"><span>🖶</span> Print Reports</button>
@@ -72,6 +73,14 @@
           </div>
           <div id="expiryList" class="mini-list"></div>
         </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2>First aid boxes</h2>
+          <button class="link" data-goto="firstaid">Open</button>
+        </div>
+        <div id="fabList" class="mini-list"></div>
       </div>
 
       <div class="card">
@@ -382,6 +391,95 @@
       </div>
     </section>
 
+
+    <!-- ---------- FIRST AID BOXES ---------- -->
+    <section class="view hidden" id="view-firstaid">
+      <header class="page-head no-print">
+        <div>
+          <h1>First Aid Boxes</h1>
+          <p class="muted">Filling a box takes the items off the main stock</p>
+        </div>
+        <div class="head-actions">
+          <button class="btn" id="fabEditBox">Edit this box</button>
+          <button class="btn" id="fabAddBox">+ Add box</button>
+          <button class="btn" data-report="firstaid">🖶 Print check sheet</button>
+        </div>
+      </header>
+
+      <div class="toolbar">
+        <div class="tabs" id="fabTabs"></div>
+      </div>
+
+      <div class="card flush">
+        <div class="card-head" style="padding: 14px 18px 0">
+          <h2 id="fabBoxTitle"></h2>
+        </div>
+        <div class="table-wrap"><table class="grid" id="fabTable"></table></div>
+      </div>
+
+      <div class="card" id="fabFormCard">
+        <div class="card-head"><h2 id="fabFormTitle">New Entry</h2></div>
+        <form id="fabForm" class="form-grid">
+          <input type="hidden" name="id" />
+          <input type="hidden" name="boxId" />
+          <label class="fld">
+            <span>Date <b>*</b></span>
+            <input type="date" name="date" required />
+          </label>
+          <label class="fld">
+            <span>Entry No. <b>*</b></span>
+            <input type="text" name="no" required />
+          </label>
+          <label class="fld wide">
+            <span>What is happening <b>*</b></span>
+            <select name="type" required>
+              <option value="FILL">Filled from store — main stock goes down</option>
+              <option value="USE">Used from box — main stock not touched</option>
+              <option value="RETURN">Returned to store — main stock goes up</option>
+              <option value="DISCARD">Expired / damaged — removed from box</option>
+            </select>
+          </label>
+          <label class="fld">
+            <span>Done by</span>
+            <input type="text" name="by" placeholder="Who filled or used it" />
+          </label>
+          <label class="fld wide">
+            <span>Remarks</span>
+            <input type="text" name="remarks" />
+          </label>
+
+          <div class="rx-block">
+            <div class="rx-block-head">
+              <span>Items <b>*</b></span>
+              <span class="hint" id="fabTypeHint"></span>
+            </div>
+            <div class="rx-line rx-line-head">
+              <span>Medicine / disposable item</span>
+              <span>Quantity</span>
+              <span>Remarks</span>
+              <span>Available</span>
+              <span></span>
+            </div>
+            <div id="fabLines"></div>
+            <button type="button" class="btn" id="fabAddLine">+ Add another item</button>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn hidden" id="fabCancelEdit">Cancel edit</button>
+            <button type="submit" class="btn primary" id="fabSaveBtn">Save Entry</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="toolbar">
+        <label class="inline-fld"><span>Month</span><input type="month" id="fabMonth" /></label>
+      </div>
+
+      <div class="card flush">
+        <div class="table-wrap"><table class="grid" id="fabEntryTable"></table></div>
+      </div>
+    </section>
+
     <!-- ---------- MONTHLY STOCK ---------- -->
     <section class="view hidden" id="view-monthly">
       <header class="page-head no-print">
@@ -491,6 +589,8 @@
               <option value="maint">Asset Maintenance Report</option>
           <option value="rx-register">Prescription Register (OP)</option>
           <option value="referral-register">Referral Register</option>
+          <option value="firstaid">First Aid Box Check Sheet (all boxes)</option>
+          <option value="firstaid-movement">First Aid Box Movement Register</option>
               <option value="ledger">Item Ledger (single item)</option>
               <option value="daybook">Receipt &amp; Issue Day Book</option>
             </select>
@@ -574,6 +674,7 @@
           <button class="btn" id="btnCsvTxns">Export transactions (.csv)</button>
           <button class="btn" id="btnCsvRx">Export prescriptions (.csv)</button>
           <button class="btn" id="btnCsvReferrals">Export referrals (.csv)</button>
+          <button class="btn" id="btnCsvBoxes">Export first aid boxes (.csv)</button>
         </div>
       </div>
 
@@ -737,6 +838,40 @@
   </div>
 </div>
 
+<!-- ================= FIRST AID BOX MODAL ================= -->
+<div class="modal-back hidden no-print" id="boxModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="boxModalTitle">Add First Aid Box</h2>
+      <button class="icon-btn" id="boxModalClose">✕</button>
+    </div>
+    <form id="boxForm" class="modal-body form-grid">
+      <input type="hidden" name="id" />
+      <label class="fld wide">
+        <span>Name of box <b>*</b></span>
+        <input type="text" name="name" required placeholder="e.g. First Aid Box 1" />
+      </label>
+      <label class="fld">
+        <span>Where it is kept</span>
+        <input type="text" name="location" placeholder="e.g. Institute — Workshop" />
+      </label>
+      <label class="fld">
+        <span>In charge</span>
+        <input type="text" name="incharge" placeholder="Person responsible" />
+      </label>
+      <label class="fld wide">
+        <span>Remarks</span>
+        <input type="text" name="remarks" />
+      </label>
+      <div class="form-actions">
+        <button type="button" class="btn danger hidden" id="btnDeleteBox">Delete</button>
+        <button type="button" class="btn" id="boxCancel">Cancel</button>
+        <button type="submit" class="btn primary">Save Box</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <div id="toast" class="toast hidden no-print"></div>
 
 <script src="assets/js/store.js"></script>
@@ -747,6 +882,7 @@
 <script src="assets/js/maintenance.js"></script>
 <script src="assets/js/prescriptions.js"></script>
 <script src="assets/js/referrals.js"></script>
+<script src="assets/js/firstaid.js"></script>
 <script src="assets/js/reports.js"></script>
 <script src="assets/js/app.js"></script>
 </body>

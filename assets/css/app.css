@@ -422,3 +422,22 @@ tr.row-editing { background: var(--brand-soft) !important; }
   padding: 7px 10px; border-radius: 8px; font: inherit; font-size: 13px;
 }
 .inline-fld input:focus { outline: 2px solid var(--brand-soft); border-color: var(--brand-2); }
+
+/* ---------------- first aid boxes ---------------- */
+
+.dot {
+  display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+  vertical-align: middle; margin-left: 4px;
+}
+.dot.warn { background: #d9930b; }
+.dot.bad { background: var(--bad); }
+
+#fabBoxTitle { font-size: 14px; font-weight: 650; }
+#fabTable .cell-input { width: 76px; }
+
+.rp-boxhead {
+  font-size: 12px; font-weight: 700; margin: 14px 0 5px;
+  padding: 4px 6px; background: #eceff1; border: 1px solid #000;
+}
+
+.chip-fab { background: #e3f1ec; color: #1a6b52; }

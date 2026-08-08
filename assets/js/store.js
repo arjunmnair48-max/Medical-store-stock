@@ -22,7 +22,21 @@
     closings: [],   // { id, month:'YYYY-MM', itemId, opening, receipts, issues, writeOff, adjust, book, physical, remarks, closedAt }
     maint: [],      // { id, itemId, date, type, doneBy, cost, nextDue, remarks }
     rx: [],         // prescriptions — { id, no, date, patient, age, sex, problem, doctor, remarks, lines:[{itemId, qty, dose}] }
-    referrals: []   // { id, no, date, patient, age, sex, hospital, referredTo, reason, escort, relation, mode, remarks }
+    referrals: [],  // { id, no, date, patient, age, sex, hospital, referredTo, reason, escort, relation, mode, remarks }
+
+    // The first aid boxes kept around the institute. Seeded with the five
+    // that exist today; they can be renamed, added to or removed.
+    boxes: [
+      { id: 'fab-1', name: 'First Aid Box 1', location: 'Institute', incharge: '', remarks: '', scale: {} },
+      { id: 'fab-2', name: 'First Aid Box 2', location: 'Institute', incharge: '', remarks: '', scale: {} },
+      { id: 'fab-3', name: 'First Aid Box 3', location: 'Institute', incharge: '', remarks: '', scale: {} },
+      { id: 'fab-4', name: 'First Aid Box 4', location: 'Institute', incharge: '', remarks: '', scale: {} },
+      { id: 'fab-5', name: 'Guest House Box', location: 'Guest House', incharge: '', remarks: '', scale: {} }
+    ],
+
+    // { id, no, date, boxId, type: FILL|USE|RETURN|DISCARD, by, remarks,
+    //   lines: [{ itemId, qty, remarks }] }
+    boxEntries: []
   };
 
   var db = null;
@@ -165,6 +179,10 @@
     d.rx.forEach(function (r) {
       r.lines = (r.lines || []).filter(function (l) { return l.itemId !== id; });
     });
+    d.boxEntries.forEach(function (e) {
+      e.lines = (e.lines || []).filter(function (l) { return l.itemId !== id; });
+    });
+    d.boxes.forEach(function (b) { if (b.scale) delete b.scale[id]; });
     save();
   }
 
@@ -479,6 +497,208 @@
     return prefix + String(max + 1).padStart(4, '0');
   }
 
+  /* ---------------- first aid boxes ---------------- */
+
+  var BOX_TYPES = {
+    FILL: 'Filled from store',
+    USE: 'Used from box',
+    RETURN: 'Returned to store',
+    DISCARD: 'Expired / damaged — removed'
+  };
+
+  function boxes() {
+    return load().boxes.slice();
+  }
+
+  function box(id) {
+    return load().boxes.filter(function (b) { return b.id === id; })[0] || null;
+  }
+
+  function saveBox(obj) {
+    var d = load();
+    if (obj.id) {
+      for (var i = 0; i < d.boxes.length; i++) {
+        if (d.boxes[i].id === obj.id) {
+          // keep the scale, which is not part of the details form
+          obj.scale = d.boxes[i].scale || {};
+          d.boxes[i] = obj;
+          break;
+        }
+      }
+    } else {
+      obj.id = uid();
+      obj.scale = obj.scale || {};
+      d.boxes.push(obj);
+    }
+    save();
+    return obj;
+  }
+
+  /** Refuses while the box still has entries, so history is never lost silently. */
+  function deleteBox(id) {
+    var d = load();
+    var used = d.boxEntries.some(function (e) { return e.boxId === id; });
+    if (used) return { ok: false, reason: 'entries' };
+    d.boxes = d.boxes.filter(function (b) { return b.id !== id; });
+    save();
+    return { ok: true };
+  }
+
+  /** The quantity this box is supposed to carry of an item (0 = not on its scale). */
+  function boxScale(boxId, itemId) {
+    var b = box(boxId);
+    return b && b.scale ? (Number(b.scale[itemId]) || 0) : 0;
+  }
+
+  function setBoxScale(boxId, itemId, qty) {
+    var b = box(boxId);
+    if (!b) return;
+    if (!b.scale) b.scale = {};
+    var n = Number(qty) || 0;
+    if (n > 0) b.scale[itemId] = n;
+    else delete b.scale[itemId];
+    save();
+  }
+
+  function boxEntries(filter) {
+    var list = load().boxEntries.slice();
+    if (filter && filter.boxId) list = list.filter(function (e) { return e.boxId === filter.boxId; });
+    if (filter && filter.month) list = list.filter(function (e) { return toMonth(e.date) === filter.month; });
+    return list.sort(function (a, b) {
+      if (a.date === b.date) return (b.createdAt || '').localeCompare(a.createdAt || '');
+      return (b.date || '').localeCompare(a.date || '');
+    });
+  }
+
+  function boxEntry(id) {
+    return load().boxEntries.filter(function (e) { return e.id === id; })[0] || null;
+  }
+
+  /** What is lying inside one box right now. */
+  function boxBalance(boxId, itemId) {
+    var n = 0;
+    load().boxEntries.forEach(function (e) {
+      if (e.boxId !== boxId) return;
+      (e.lines || []).forEach(function (l) {
+        if (l.itemId !== itemId) return;
+        var q = Math.abs(Number(l.qty) || 0);
+        n += (e.type === 'FILL') ? q : -q;      // every other type takes out of the box
+      });
+    });
+    return n;
+  }
+
+  /** Every item this box either holds or is supposed to hold. */
+  function boxItems(boxId) {
+    var seen = {};
+    var b = box(boxId);
+    if (b && b.scale) Object.keys(b.scale).forEach(function (id) { seen[id] = true; });
+    load().boxEntries.forEach(function (e) {
+      if (e.boxId !== boxId) return;
+      (e.lines || []).forEach(function (l) { if (l.itemId) seen[l.itemId] = true; });
+    });
+    return Object.keys(seen).map(function (id) {
+      var it = item(id);
+      if (!it) return null;
+      return {
+        item: it,
+        inBox: boxBalance(boxId, id),
+        required: boxScale(boxId, id)
+      };
+    }).filter(Boolean).sort(function (a, b) {
+      return a.item.name.localeCompare(b.item.name);
+    });
+  }
+
+  /**
+   * Mirrors a box entry into the main stock ledger.
+   *
+   * Filling a box takes the items off the shelf, returning them puts them
+   * back; using or discarding from a box touches only the box, because the
+   * main stock already gave those items up when the box was filled. As with
+   * prescriptions the mirror entries are rebuilt from scratch, so editing a
+   * box entry can never leave a stale movement in the stock.
+   */
+  function syncBoxTxns(entry) {
+    var d = load();
+    d.txns = d.txns.filter(function (t) { return t.boxEntryId !== entry.id; });
+    if (entry.type !== 'FILL' && entry.type !== 'RETURN') return;
+
+    var b = box(entry.boxId);
+    (entry.lines || []).forEach(function (line) {
+      var qty = Math.abs(Number(line.qty) || 0);
+      if (!line.itemId || !qty) return;
+      var it = item(line.itemId) || {};
+      d.txns.push({
+        id: uid(),
+        boxEntryId: entry.id,
+        itemId: line.itemId,
+        date: entry.date,
+        type: entry.type === 'FILL' ? 'OUT' : 'IN',
+        qty: qty,
+        ref: entry.no || '',
+        party: b ? b.name : 'First aid box',
+        batchNo: it.batchNo || '',
+        expiry: it.expiry || '',
+        rate: it.rate || '',
+        remarks: entry.type === 'FILL' ? 'Filled into first aid box' : 'Returned from first aid box',
+        createdAt: new Date().toISOString()
+      });
+    });
+  }
+
+  function saveBoxEntry(obj) {
+    var d = load();
+    if (obj.id) {
+      for (var i = 0; i < d.boxEntries.length; i++) {
+        if (d.boxEntries[i].id === obj.id) { d.boxEntries[i] = obj; break; }
+      }
+    } else {
+      obj.id = uid();
+      obj.createdAt = new Date().toISOString();
+      d.boxEntries.push(obj);
+    }
+    syncBoxTxns(obj);
+    save();
+    return obj;
+  }
+
+  function deleteBoxEntry(id) {
+    var d = load();
+    d.boxEntries = d.boxEntries.filter(function (e) { return e.id !== id; });
+    d.txns = d.txns.filter(function (t) { return t.boxEntryId !== id; });
+    save();
+  }
+
+  function nextBoxNo(date) {
+    var year = (date || new Date().toISOString()).slice(0, 4);
+    var prefix = 'FAB/' + year + '/';
+    var max = 0;
+    load().boxEntries.forEach(function (e) {
+      if (!e.no || e.no.indexOf(prefix) !== 0) return;
+      var n = parseInt(e.no.slice(prefix.length), 10);
+      if (isFinite(n) && n > max) max = n;
+    });
+    return prefix + String(max + 1).padStart(4, '0');
+  }
+
+  /** Boxes that are short of their scale, or holding something expired. */
+  function boxAlerts() {
+    var today = new Date();
+    return boxes().map(function (b) {
+      var shortOf = 0, expired = 0, lines = 0;
+      boxItems(b.id).forEach(function (r) {
+        lines++;
+        if (r.required > 0 && r.inBox < r.required) shortOf++;
+        if (r.inBox > 0 && r.item.expiry) {
+          var y = +r.item.expiry.slice(0, 4), mo = +r.item.expiry.slice(5, 7);
+          if (new Date(y, mo, 0) < today) expired++;
+        }
+      });
+      return { box: b, shortOf: shortOf, expired: expired, lines: lines };
+    });
+  }
+
   /* ---------------- alerts ---------------- */
 
   function lowStock() {
@@ -562,6 +782,13 @@
 
     referralList: referralList, referral: referral, saveReferral: saveReferral,
     deleteReferral: deleteReferral, nextReferralNo: nextReferralNo,
+
+    BOX_TYPES: BOX_TYPES,
+    boxes: boxes, box: box, saveBox: saveBox, deleteBox: deleteBox,
+    boxScale: boxScale, setBoxScale: setBoxScale,
+    boxEntries: boxEntries, boxEntry: boxEntry, saveBoxEntry: saveBoxEntry,
+    deleteBoxEntry: deleteBoxEntry, nextBoxNo: nextBoxNo,
+    boxBalance: boxBalance, boxItems: boxItems, boxAlerts: boxAlerts,
 
     lowStock: lowStock, expiring: expiring, maintDue: maintDue,
 

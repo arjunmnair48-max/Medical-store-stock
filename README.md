@@ -5,8 +5,9 @@ permanent assets — with a monthly stock update and printable A4 report sheets
 that can be pasted straight into the physical register.
 
 It also keeps the **prescription register**, where the medicines written for a
-patient are issued from stock automatically, and the **referral register** of
-patients sent on to other hospitals.
+patient are issued from stock automatically, the **referral register** of
+patients sent on to other hospitals, and the **first aid boxes** kept around
+the institute — filling a box takes its items off the main stock.
 
 It runs offline. Nothing is sent anywhere, no server is involved and no
 internet connection is needed.
@@ -62,10 +63,11 @@ survive an uninstall or a reinstall.
 | `Ctrl+E` | Record receipt / issue |
 | `Ctrl+R` | New prescription |
 | `Ctrl+D` | New referral |
+| `Ctrl+F` | First aid box entry |
 | `Ctrl+B` | Save backup |
 | `Ctrl+P` | Print report |
 | `Ctrl+Shift+P` | Save report as PDF |
-| `Ctrl+1` … `Ctrl+9` | Jump to a screen |
+| `Ctrl+1` … `Ctrl+9`, `Ctrl+0` | Jump to a screen |
 
 ---
 
@@ -87,6 +89,7 @@ further down.
 | Whenever stock goes out | Record an **Issue** with the department / indent number | Receipt / Issue |
 | Whenever a patient is given medicines | Record the **prescription** — the medicines come off the stock by themselves | Prescriptions |
 | Whenever a patient is sent to another hospital | Record the **referral slip** | Referrals |
+| Whenever a first aid box is filled or used | Record it — filling deducts from the main stock | First Aid Boxes |
 | When something expires or breaks | Record it as **Expired / Damaged** | Receipt / Issue |
 | End of every month | Count the shelves, enter the **physical count**, press **Close & Save Month** | Monthly Stock |
 | After closing | Print the register sheet and paste it in the register | Print Reports |
@@ -161,6 +164,43 @@ mode of transport.
 
 Both registers can be filtered by month, searched by any field, and printed.
 
+### First Aid Boxes
+Each first aid box is a small store of its own. The app starts with the five
+that exist today — four in the institute and one in the guest house — and each
+can be renamed, moved, given a person in charge, or joined by more.
+
+Four kinds of entry, and each says plainly what it does to the stock:
+
+| Entry | The box | The main stock |
+|---|---|---|
+| **Filled from store** | goes up | **goes down** |
+| **Used from box** | goes down | untouched — it already gave those items up when the box was filled |
+| **Returned to store** | goes down | **goes up** |
+| **Expired / damaged** | goes down | untouched (written off) |
+
+An entry can carry several items at once, so a whole refill is one voucher.
+The figure beside each line shows what is available in whichever place the
+entry draws on — the store when filling, the box otherwise.
+
+Each box can be given a **scale**: how many of each item it is supposed to
+carry. Type the required quantity straight into the contents table and the
+**Short by** column tells you what to make good on the next round. Items in a
+box that have passed their expiry are flagged, and the box tab carries a dot —
+amber when short of scale, red when something in it has expired.
+
+Editing or deleting an entry corrects both the box and the main stock, exactly
+as with prescriptions, because the stock movements are rebuilt from the entry
+every time it is saved. For the same reason a box movement shows as `✚` on the
+Receipt / Issue screen and is edited from the box screen, not there.
+
+A box that still has entries against it cannot be deleted — its history would
+be lost and the stock it drew would be left unaccounted for. Rename it, or
+empty it first.
+
+**Print check sheet** gives one A4 sheet listing every box with required
+against found and a Short-by column — the sheet to carry while walking round
+and checking the boxes.
+
 ### Monthly Stock
 Pick a month and the table shows, for every item:
 
@@ -200,6 +240,8 @@ store keeper, the verifier and the medical officer:
 * Receipt & Issue Day Book
 * Prescription Register (OP) — by month
 * Referral Register — by month
+* First Aid Box Check Sheet — all boxes on one sheet
+* First Aid Box Movement Register — by month
 
 Press **Print** and choose *A4*, *Landscape* in the browser's print dialog.
 Turning on "Background graphics" keeps the shading on the heading row.
@@ -211,9 +253,9 @@ in days, and the currency symbol. Also:
 
 * **Export backup (.json)** — the whole register in one file.
 * **Restore from backup** — replaces everything currently in the browser.
-* **Export items / transactions / prescriptions / referrals (.csv)** — opens in
-  Excel or LibreOffice. The prescription export has one row per medicine, so it
-  can be pivoted or totalled easily.
+* **Export items / transactions / prescriptions / referrals / first aid boxes
+  (.csv)** — opens in Excel or LibreOffice. The prescription export has one row
+  per medicine, so it can be pivoted or totalled easily.
 
 ---
 
@@ -253,6 +295,7 @@ assets/js/monthly.js       monthly closing
 assets/js/maintenance.js   asset maintenance
 assets/js/prescriptions.js prescription register + automatic issue
 assets/js/referrals.js     referral register
+assets/js/firstaid.js      first aid boxes
 assets/js/reports.js       printable reports
 assets/js/app.js           routing, dashboard, settings, backup
 

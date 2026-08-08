@@ -185,6 +185,7 @@ function buildMenu() {
         { label: 'Record Receipt / Issue', accelerator: 'CmdOrCtrl+E', click: () => send('menu', 'new-txn') },
         { label: 'New Prescription', accelerator: 'CmdOrCtrl+R', click: () => send('menu', 'new-rx') },
         { label: 'New Referral', accelerator: 'CmdOrCtrl+D', click: () => send('menu', 'new-referral') },
+        { label: 'First Aid Box Entry', accelerator: 'CmdOrCtrl+F', click: () => send('menu', 'new-box-entry') },
         { type: 'separator' },
         { label: 'Save Backup…', accelerator: 'CmdOrCtrl+B', click: exportBackup },
         { label: 'Restore from Backup…', click: importBackup },
@@ -204,10 +205,11 @@ function buildMenu() {
         { label: 'Receipt / Issue', accelerator: 'CmdOrCtrl+3', click: () => send('menu', 'go:txns') },
         { label: 'Prescriptions', accelerator: 'CmdOrCtrl+4', click: () => send('menu', 'go:rx') },
         { label: 'Referrals', accelerator: 'CmdOrCtrl+5', click: () => send('menu', 'go:referrals') },
-        { label: 'Monthly Stock', accelerator: 'CmdOrCtrl+6', click: () => send('menu', 'go:monthly') },
-        { label: 'Asset Maintenance', accelerator: 'CmdOrCtrl+7', click: () => send('menu', 'go:maint') },
-        { label: 'Print Reports', accelerator: 'CmdOrCtrl+8', click: () => send('menu', 'go:reports') },
-        { label: 'Settings & Backup', accelerator: 'CmdOrCtrl+9', click: () => send('menu', 'go:settings') }
+        { label: 'First Aid Boxes', accelerator: 'CmdOrCtrl+6', click: () => send('menu', 'go:firstaid') },
+        { label: 'Monthly Stock', accelerator: 'CmdOrCtrl+7', click: () => send('menu', 'go:monthly') },
+        { label: 'Asset Maintenance', accelerator: 'CmdOrCtrl+8', click: () => send('menu', 'go:maint') },
+        { label: 'Print Reports', accelerator: 'CmdOrCtrl+9', click: () => send('menu', 'go:reports') },
+        { label: 'Settings & Backup', accelerator: 'CmdOrCtrl+0', click: () => send('menu', 'go:settings') }
       ]
     },
     {
