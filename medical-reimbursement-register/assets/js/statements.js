@@ -44,6 +44,14 @@
 
   function typeLabel(c) { return Store.CLAIM_TYPE_SHORT[c.type] || ''; }
 
+  /** A small note under a name saying what is still holding its claims up. */
+  function stageNote(t, word) {
+    var bits = [];
+    if (t.awaitingCount) bits.push(t.awaitingCount + ' ' + word + '(s) still to be examined');
+    if (t.toSanctionCount) bits.push(t.toSanctionCount + ' awaiting sanction');
+    return bits.length ? '<br><span class="rp-dim">' + bits.join(', ') + '</span>' : '';
+  }
+
   function statusLabel(c) {
     return Store.CLAIM_STATUS[c.status || 'PENDING'] || '';
   }
@@ -71,19 +79,20 @@
   /** Every particular the office asked to keep, one claim to a line. */
   function claimTable(list, opts) {
     opts = opts || {};
+    // the widths add to 100 — over that and the headings wrap mid-word
     var cols = [
-      { label: 'Sl.', w: '3.5%', align: 'center' },
-      { label: 'Date of treatment', w: '8%', align: 'center' },
-      { label: 'Claim No.', w: '10%' },
-      { label: 'Type', w: '7%' },
-      { label: 'Name', w: '13%' },
-      { label: 'Dependency', w: '8%' },
-      { label: 'ID card no.', w: '9%' },
-      { label: 'Hospital', w: '15%' },
+      { label: 'Sl.', w: '3%', align: 'center' },
+      { label: 'Date of treatment', w: '7.5%', align: 'center' },
+      { label: 'Claim No.', w: '9.5%' },
+      { label: 'Type', w: '6%' },
+      { label: 'Name', w: '12%' },
+      { label: 'Dependency', w: '7.5%' },
+      { label: 'ID card no.', w: '8%' },
+      { label: 'Hospital', w: '14.5%' },
       { label: 'Amount claimed', w: '8%', align: 'right' },
       { label: 'Amount admitted', w: '8%', align: 'right' },
-      { label: 'Disallowed', w: '6%', align: 'right' },
-      { label: 'Status', w: '6%' }
+      { label: 'Disallowed', w: '8%', align: 'right' },
+      { label: 'Status', w: '8%' }
     ];
 
     var rows = [], sl = 0;
@@ -125,24 +134,27 @@
   /** A short table of the two claim kinds side by side. */
   function typeSummary(list) {
     var cols = [
-      { label: 'Kind of claim', w: '28%' },
-      { label: 'No. of claims', w: '10%', align: 'right' },
-      { label: 'Amount claimed', w: '15%', align: 'right' },
-      { label: 'Amount admitted', w: '15%', align: 'right' },
-      { label: 'Disallowed', w: '14%', align: 'right' },
-      { label: 'Sanctioned, not paid', w: '18%', align: 'right' }
+      { label: 'Kind of claim', w: '24%' },
+      { label: 'No. of claims', w: '9%', align: 'right' },
+      { label: 'Amount claimed', w: '13%', align: 'right' },
+      { label: 'Amount admitted', w: '13%', align: 'right' },
+      { label: 'Disallowed', w: '12%', align: 'right' },
+      { label: 'Sanctioned, not paid', w: '15%', align: 'right' },
+      { label: 'Still to be examined', w: '14%', align: 'right' }
     ];
     var rows = ['HOSPITAL', 'REIMB'].map(function (k) {
       var sub = list.filter(function (c) { return c.type === k; });
       var t = Store.claimTotals(sub);
       return [Store.CLAIM_TYPES[k], t.count, money(t.claimed), money(t.reimbursed),
-        money(t.disallowed), t.payable ? money(t.payable) : '—'];
+        money(t.disallowed), t.payable ? money(t.payable) : '—',
+        t.awaitingCount ? t.awaitingCount + ' · ' + money(t.awaiting) : '—'];
     });
     var all = Store.claimTotals(list);
     return P.table(cols, rows, {
       blanks: 0,
       total: ['TOTAL', all.count, money(all.claimed), money(all.reimbursed),
-        money(all.disallowed), all.payable ? money(all.payable) : '—']
+        money(all.disallowed), all.payable ? money(all.payable) : '—',
+        all.awaitingCount ? all.awaitingCount + ' · ' + money(all.awaiting) : '—']
     });
   }
 
@@ -234,6 +246,10 @@
       (whole.payable
         ? '<b>' + money(whole.payable) + '</b> stands sanctioned and is yet to be released. '
         : 'Nothing sanctioned is awaiting release. ') +
+      (whole.toSanctionCount
+        ? whole.toSanctionCount + ' claim(s) admitting ' + money(whole.toSanction) +
+          ' have been checked and await a sanction order. '
+        : '') +
       (whole.awaitingCount
         ? whole.awaitingCount + ' claim(s) billing ' + money(whole.awaiting) +
           ' are still to be examined.'
@@ -383,9 +399,7 @@
         sl,
         '<b>' + esc(g.name) + '</b>' +
         (h && h.orderNo ? '<br><span class="rp-dim">order ' + esc(h.orderNo) + '</span>' : '') +
-        (t.awaitingCount
-          ? '<br><span class="rp-dim">' + t.awaitingCount + ' bill(s) still to be examined</span>'
-          : ''),
+        stageNote(t, 'bill'),
         esc(h ? (h.city || '—') : '—'),
         h && h.empanelTo ? dmy(h.empanelTo) : '—',
         t.count,
@@ -425,18 +439,18 @@
       .sort(function (a, b) { return b.totals.claimed - a.totals.claimed; });
 
     var cols = [
-      { label: 'Sl.', w: '4%', align: 'center' },
-      { label: 'Emp. No.', w: '7%' },
-      { label: 'Name of staff', w: '15%' },
-      { label: 'Designation', w: '11%' },
-      { label: 'ID card no.', w: '8%' },
-      { label: 'Treated persons', w: '13%' },
+      { label: 'Sl.', w: '3%', align: 'center' },
+      { label: 'Emp. No.', w: '6.5%' },
+      { label: 'Name of staff', w: '14%' },
+      { label: 'Designation', w: '10%' },
+      { label: 'ID card no.', w: '7.5%' },
+      { label: 'Treated persons', w: '12%' },
       { label: 'No. of claims', w: '5%', align: 'right' },
-      { label: 'Amount claimed', w: '9%', align: 'right' },
-      { label: 'Amount admitted', w: '9%', align: 'right' },
-      { label: 'Disallowed', w: '8%', align: 'right' },
+      { label: 'Amount claimed', w: '8.5%', align: 'right' },
+      { label: 'Amount admitted', w: '8.5%', align: 'right' },
+      { label: 'Disallowed', w: '8.5%', align: 'right' },
       { label: 'Already paid', w: '8%', align: 'right' },
-      { label: 'Now payable', w: '8%', align: 'right' }
+      { label: 'Now payable', w: '8.5%', align: 'right' }
     ];
 
     var rows = [], sl = 0;
@@ -461,9 +475,7 @@
       rows.push([
         sl, esc(s.empNo || '—'),
         '<b>' + esc(g.name) + '</b>' +
-        (t.awaitingCount
-          ? '<br><span class="rp-dim">' + t.awaitingCount + ' claim(s) still to be examined</span>'
-          : ''),
+        stageNote(t, 'claim'),
         esc(s.designation || '—'),
         esc(s.idCardNo || '—'),
         whoList || '—',
@@ -537,16 +549,16 @@
 
   function staffRegister() {
     var cols = [
-      { label: 'Sl.', w: '4%', align: 'center' },
-      { label: 'Emp. No.', w: '8%' },
-      { label: 'Name of staff', w: '18%' },
-      { label: 'Designation / Dept.', w: '15%' },
-      { label: 'Card no.', w: '10%' },
-      { label: 'Age', w: '5%', align: 'right' },
-      { label: 'Name of dependent', w: '18%' },
+      { label: 'Sl.', w: '3%', align: 'center' },
+      { label: 'Emp. No.', w: '7.5%' },
+      { label: 'Name of staff', w: '17%' },
+      { label: 'Designation / Dept.', w: '14%' },
+      { label: 'Card no.', w: '9.5%' },
+      { label: 'Age', w: '4.5%', align: 'right' },
+      { label: 'Name of dependent', w: '17%' },
       { label: 'Dependency', w: '11%' },
-      { label: 'Age', w: '5%', align: 'right' },
-      { label: 'Card no.', w: '10%' }
+      { label: 'Age', w: '4.5%', align: 'right' },
+      { label: 'Card no.', w: '12%' }
     ];
 
     var rows = [], sl = 0, deps = 0;
@@ -785,7 +797,8 @@
         name = 'hospital-reimbursement';
         rows = [['Hospital', 'Place', 'Order no', 'Empanelled from', 'Empanelled upto',
           'No of claims', 'Amount billed', 'Amount admitted', 'Amount disallowed',
-          'Already paid', 'Now payable', 'Claims still to be examined']];
+          'Already paid', 'Now payable', 'Awaiting sanction',
+          'Claims still to be examined']];
         Store.claimsByHospital(p.filter).forEach(function (g) {
           var only = g.claims.filter(function (c) { return c.type === 'HOSPITAL'; });
           if (!only.length) return;
@@ -793,7 +806,7 @@
           var hh = g.hospital || {};
           rows.push([g.name, hh.city || '', hh.orderNo || '', hh.empanelFrom || '',
             hh.empanelTo || '', t.count, t.claimed, t.reimbursed, t.disallowed,
-            t.paid, t.payable, t.awaitingCount]);
+            t.paid, t.payable, t.toSanction, t.awaitingCount]);
         });
         break;
 
@@ -801,7 +814,8 @@
         name = 'staff-reimbursement';
         rows = [['Emp No', 'Name of staff', 'Designation', 'ID card no',
           'No of claims', 'Amount claimed', 'Amount admitted', 'Amount disallowed',
-          'Already paid', 'Now payable', 'Claims still to be examined']];
+          'Already paid', 'Now payable', 'Awaiting sanction',
+          'Claims still to be examined']];
         Store.claimsByStaff(p.filter).forEach(function (g) {
           var only = g.claims.filter(function (c) { return c.type === 'REIMB'; });
           if (!only.length) return;
@@ -809,7 +823,7 @@
           var ss = g.staff || {};
           rows.push([ss.empNo || '', g.name, ss.designation || '', ss.idCardNo || '',
             t.count, t.claimed, t.reimbursed, t.disallowed, t.paid, t.payable,
-            t.awaitingCount]);
+            t.toSanction, t.awaitingCount]);
         });
         break;
 

@@ -160,15 +160,31 @@ Two figures follow from that, and they are kept apart because they answer
 different questions:
 
 * **Disallowed** — billed but not admissible. Counted only on claims that have
-  actually been examined. A bill still lying pending has nothing disallowed on
-  it yet; it simply has not been looked at, and the list says *not assessed*
+  actually been examined. A bill still lying untouched has nothing disallowed
+  on it yet; it simply has not been looked at, and the list says *not assessed*
   rather than showing the whole bill as a deduction.
 * **Now payable** — the amount already **sanctioned** but not yet released.
   This is the only figure the office genuinely owes, and it is what the two
   reimbursement reports total at the foot.
 
-Claims not yet examined are counted separately again, as **awaiting
-assessment**, at the amount billed.
+A claim sits in exactly one of four stages, and the register counts it in one
+place only:
+
+| Stage | Counted as |
+|---|---|
+| Not yet examined | **Awaiting assessment**, at the amount billed |
+| Examined, sanction order not issued | **Awaiting sanction**, at the amount admitted |
+| Sanctioned, payment not released | **Now payable** |
+| Payment released | **Already paid** |
+
+A claim counts as examined either when its status leaves *Pending*, or as soon
+as an admitted amount is entered against it. That matters because offices
+differ: some type the admitted figure only when sanction is issued, others fill
+it in the moment the bill is checked against the rules and leave the status at
+*Pending* until the order is signed. Either way the deduction shows from the
+point the bill was actually examined, and neither workflow has to wait for the
+other's step. The *Awaiting sanction* column only appears when there is
+something in it, so an office using the first way never sees it.
 
 While the date is being entered the form checks it against the hospital's
 empanelment and says so underneath. A bill for a day the hospital was outside

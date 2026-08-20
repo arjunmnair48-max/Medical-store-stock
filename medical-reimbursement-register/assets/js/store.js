@@ -605,16 +605,21 @@
    *   claimed    — billed, before the rules are applied
    *   reimbursed — admitted after restriction, the final figure
    *   disallowed — billed but not admissible, over examined claims only
-   *   payable    — admitted and sanctioned, payment not yet released
+   *   awaiting   — not examined yet, at the amount billed
+   *   toSanction — examined, sanction order not yet issued
+   *   payable    — sanctioned, payment not yet released
    *   paid       — payment released
-   *   awaiting   — claims not examined yet, at the amount billed
+   *
+   * Every claim falls in exactly one of the last four, and the admitted
+   * amounts of the last three add back to `reimbursed`.
    */
   function claimTotals(list) {
     var t = {
       count: (list || []).length,
       claimed: 0, reimbursed: 0, disallowed: 0,
-      payable: 0, paid: 0,
-      awaiting: 0, awaitingCount: 0, pending: 0
+      awaiting: 0, awaitingCount: 0,
+      toSanction: 0, toSanctionCount: 0,
+      payable: 0, paid: 0, pending: 0
     };
     (list || []).forEach(function (c) {
       var billed = Number(c.amountClaimed) || 0;
@@ -624,21 +629,49 @@
       t.claimed += billed;
       t.reimbursed += admitted;
 
-      if (st === 'PENDING') {
+      if (st === 'PENDING') t.pending += 1;
+
+      // nothing is disallowed on a bill nobody has examined — it is only
+      // waiting to be looked at, and is counted at what it billed
+      if (!isAssessed(c)) {
         t.awaiting += billed;
         t.awaitingCount += 1;
-        t.pending += 1;
         return;
       }
+
       t.disallowed += Math.max(0, billed - admitted);
+
       if (st === 'PAID') t.paid += admitted;
       else if (st === 'SANCTIONED') t.payable += admitted;
+      else if (st !== 'REJECTED') {
+        // checked against the rules, but the sanction order is not out yet
+        t.toSanction += admitted;
+        t.toSanctionCount += 1;
+      }
     });
     return t;
   }
 
-  /** Has this claim been examined, so its deduction is a real one? */
-  function isAssessed(c) { return (c && c.status || 'PENDING') !== 'PENDING'; }
+  /**
+   * Has this claim been examined, so that its deduction is a real one?
+   *
+   * Offices differ on when the admitted figure gets typed in. Some enter it
+   * only once sanction is issued, and the status carries the answer. Others
+   * fill it in the moment the bill is checked against the rules and leave
+   * the status at Pending until the sanction order is signed — so an amount
+   * actually entered counts as an assessment on its own, and the deduction
+   * shows from that point rather than lagging until sanction.
+   *
+   * A claim examined and found wholly inadmissible is REJECTED, which the
+   * status test already covers; a bare zero left sitting on a pending claim
+   * is an empty box, not a finding.
+   */
+  function isAssessed(c) {
+    if (!c) return false;
+    if ((c.status || 'PENDING') !== 'PENDING') return true;
+    var v = c.amountReimbursed;
+    return v !== '' && v !== null && v !== undefined && Number(v) > 0;
+  }
 
   /** What a single claim had knocked off it, or null while it is unexamined. */
   function disallowedOn(c) {

@@ -66,6 +66,15 @@
         cls: year.awaitingCount ? 'warn' : 'good' }
     ];
 
+    // only offices that enter the admitted figure before sanction ever have
+    // anything sitting here, so the card stays out of the way otherwise
+    if (year.toSanctionCount) {
+      cards.push({
+        k: 'Awaiting sanction', v: UI.money(year.toSanction),
+        s: year.toSanctionCount + ' claim(s) checked, order not yet issued', cls: 'warn'
+      });
+    }
+
     UI.$('#statGrid').innerHTML = cards.map(function (c) {
       return '<div class="stat ' + c.cls + '">' +
         '<div class="stat-k">' + UI.esc(c.k) + '</div>' +
@@ -94,15 +103,17 @@
     // admitted on it yet; a sanctioned one at what is actually to be released
     miniList(UI.$('#pendingList'), Store.claimsPending().slice(0, 12).map(function (c) {
       var b = Store.claimant(c) || {};
-      var waiting = (c.status || 'PENDING') === 'PENDING';
+      var unseen = !Store.isAssessed(c);
+      var sanctioned = (c.status || 'PENDING') === 'SANCTIONED';
+      var stage = unseen ? 'to be examined'
+        : sanctioned ? 'to be released' : 'to be sanctioned';
       return {
         main: '<b>' + UI.esc(b.name || '—') + '</b> <span class="dim">' +
-          UI.esc(Store.CLAIM_TYPE_SHORT[c.type] || '') + ' · ' +
-          (waiting ? 'to be examined' : 'to be released') + '</span>',
-        side: waiting
+          UI.esc(Store.CLAIM_TYPE_SHORT[c.type] || '') + ' · ' + stage + '</span>',
+        side: unseen
           ? UI.money(c.amountClaimed) + ' billed'
           : UI.money(c.amountReimbursed),
-        cls: waiting ? 'warn' : 'good'
+        cls: unseen ? 'warn' : sanctioned ? 'good' : 'warn'
       };
     }), 'No claim is waiting to be settled. 👍');
 

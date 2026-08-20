@@ -318,6 +318,9 @@
       '<span>Claimed <b>' + UI.money(tot.claimed) + '</b></span>' +
       '<span>Admitted <b class="good">' + UI.money(tot.reimbursed) + '</b></span>' +
       '<span>Disallowed <b>' + UI.money(tot.disallowed) + '</b></span>' +
+      (tot.toSanctionCount
+        ? '<span>Awaiting sanction <b class="warn">' + UI.money(tot.toSanction) + '</b></span>'
+        : '') +
       (tot.payable
         ? '<span>Sanctioned, not paid <b class="warn">' + UI.money(tot.payable) + '</b></span>'
         : '') +
