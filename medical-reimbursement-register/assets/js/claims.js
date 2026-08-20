@@ -142,10 +142,12 @@
     UI.$('#clmClaimedLabel').innerHTML = (cashless
       ? 'Amount billed by hospital' : 'Amount claimed by staff') + ' <b>*</b>';
     UI.$('#clmReimbLabel').textContent = cashless
-      ? 'Amount passed to hospital' : 'Amount reimbursed to staff';
-    UI.$('#clmPayee').textContent = cashless
+      ? 'Amount admitted — passed to hospital' : 'Amount admitted — reimbursed to staff';
+    UI.$('#clmPayee').innerHTML = (cashless
       ? 'Payment is made to the hospital.'
-      : 'Reimbursement is paid to the staff member.';
+      : 'Reimbursement is paid to the staff member.') +
+      ' The amount admitted is the final figure after restriction — whatever the bill ' +
+      'claimed over and above it is <b>disallowed</b>, not carried forward.';
     UI.$('#clmHospLabel').innerHTML = cashless
       ? 'Empanelled hospital <b>*</b>' : 'Hospital treated at';
     form().elements.hospitalId.required = cashless;
@@ -214,7 +216,7 @@
     var passed = Number(o.amountReimbursed) || 0;
     if (claimed <= 0) { UI.toast('Enter the amount claimed', 'warn'); return; }
     if (passed > claimed &&
-      !confirm('The amount passed (' + UI.money(passed) + ') is more than the amount claimed (' +
+      !confirm('The amount admitted (' + UI.money(passed) + ') is more than the amount claimed (' +
         UI.money(claimed) + ').\n\nSave it as entered?')) return;
 
     // a bill outside the empanelment period is the one thing the office
@@ -314,9 +316,15 @@
     UI.$('#clmTotals').innerHTML =
       '<span><b>' + tot.count + '</b> claim' + (tot.count === 1 ? '' : 's') + '</span>' +
       '<span>Claimed <b>' + UI.money(tot.claimed) + '</b></span>' +
-      '<span>Reimbursed <b class="good">' + UI.money(tot.reimbursed) + '</b></span>' +
-      '<span>Outstanding <b class="' + (tot.balance > 0 ? 'warn' : '') + '">' +
-      UI.money(tot.balance) + '</b></span>';
+      '<span>Admitted <b class="good">' + UI.money(tot.reimbursed) + '</b></span>' +
+      '<span>Disallowed <b>' + UI.money(tot.disallowed) + '</b></span>' +
+      (tot.payable
+        ? '<span>Sanctioned, not paid <b class="warn">' + UI.money(tot.payable) + '</b></span>'
+        : '') +
+      (tot.awaitingCount
+        ? '<span>Awaiting assessment <b class="warn">' + tot.awaitingCount +
+          '</b> <span class="dim">(' + UI.money(tot.awaiting) + ' billed)</span></span>'
+        : '');
 
     if (!list.length) {
       t.innerHTML = '<tbody><tr><td class="empty">' +
@@ -328,7 +336,7 @@
 
     var html = '<thead><tr>' +
       ['Date of treatment', 'Claim No.', 'Type', 'Name', 'Dependency', 'Card No.',
-        'Hospital', 'Claimed', 'Reimbursed', 'Balance', 'Status', '']
+        'Hospital', 'Claimed', 'Admitted', 'Disallowed', 'Status', '']
         .map(function (h) { return '<th>' + h + '</th>'; }).join('') +
       '</tr></thead><tbody>';
 
@@ -337,6 +345,7 @@
       var h = Store.hospital(c.hospitalId);
       var claimed = Number(c.amountClaimed) || 0;
       var passed = Number(c.amountReimbursed) || 0;
+      var cut = Store.disallowedOn(c);
       var st = c.status || 'PENDING';
       var outside = c.type === 'HOSPITAL' && h && !Store.isEmpanelledOn(h, c.treatFrom);
       var dates = UI.dmy(c.treatFrom) +
@@ -354,8 +363,11 @@
         (outside ? '<br><span class="chip chip-bad">outside empanelment</span>' : '') + '</td>' +
         '<td class="ta-right nowrap">' + UI.money(claimed) + '</td>' +
         '<td class="ta-right nowrap">' + (passed ? UI.money(passed) : '<span class="dim">—</span>') + '</td>' +
-        '<td class="ta-right nowrap">' + (claimed - passed
-          ? '<span class="warn">' + UI.money(claimed - passed) + '</span>' : '—') + '</td>' +
+        // an unexamined claim has nothing disallowed yet — it is only
+        // waiting to be looked at, and must not read as a deduction
+        '<td class="ta-right nowrap">' + (cut === null
+          ? '<span class="dim">not assessed</span>'
+          : cut ? UI.money(cut) : '—') + '</td>' +
         '<td><span class="chip ' + STATUS_CHIP[st] + '">' +
         UI.esc(Store.CLAIM_STATUS[st] || st) + '</span></td>' +
         '<td class="row-act nowrap">' +
@@ -378,7 +390,7 @@
     var list = Store.claimList().filter(matches);
     var rows = [['Date of treatment', 'Treated upto', 'Claim No', 'Type', 'Staff', 'Emp No',
       'Name', 'Dependency', 'ID card no', 'Age', 'Hospital', 'Diagnosis / treatment',
-      'Bill no', 'Bill date', 'Amount claimed', 'Amount reimbursed', 'Balance',
+      'Bill no', 'Bill date', 'Amount claimed', 'Amount admitted', 'Amount disallowed',
       'Status', 'Sanction no', 'Date of payment', 'Remarks']];
     list.forEach(function (c) {
       var b = Store.claimant(c) || {};
@@ -386,10 +398,11 @@
       var h = Store.hospital(c.hospitalId);
       var claimed = Number(c.amountClaimed) || 0;
       var passed = Number(c.amountReimbursed) || 0;
+      var cut = Store.disallowedOn(c);
       rows.push([c.treatFrom, c.treatTo, c.no, Store.CLAIM_TYPE_SHORT[c.type] || c.type,
         s.name || '', s.empNo || '', b.name || '', b.relation || '', b.idCardNo || '',
         Store.ageOf(b, c.treatFrom), h ? h.name : (c.hospitalName || ''), c.diagnosis || '',
-        c.billNo || '', c.billDate || '', claimed, passed, claimed - passed,
+        c.billNo || '', c.billDate || '', claimed, passed, cut === null ? '' : cut,
         Store.CLAIM_STATUS[c.status || 'PENDING'], c.sanctionNo || '', c.paidDate || '',
         c.remarks || '']);
     });

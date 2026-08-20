@@ -80,7 +80,7 @@ file — see the warning further down.
 | Whenever an empanelment is extended | Press **Extend**, enter the new date and order number | Empanelled Hospitals |
 | Whenever a hospital bill arrives | Enter it as a **hospital claim** | Medical Claims |
 | Whenever an employee claims expenses | Enter it as an **individual reimbursement** | Medical Claims |
-| When a claim is passed | Enter the **amount reimbursed** and the sanction details | Medical Claims |
+| When a claim is passed | Enter the **amount admitted** and the sanction details | Medical Claims |
 | End of every month | Print or download the **Monthly Claim Register** | Reports |
 | End of every month | Print the two **reimbursement reports** — what is payable to the hospitals, and to the staff | Reports |
 | End of the year | Print or download the **Annual Claim Statement** | Reports |
@@ -145,9 +145,30 @@ Choose the staff member and then the person treated — himself or any of his
 dependents — and the **ID card number, dependency and age** are filled in from
 the register rather than typed again. Then the **date of treatment**, the
 hospital, the diagnosis, the bill number, the **amount claimed** and, when the
-bill is passed, the **amount reimbursed**. The outstanding balance follows on
-its own, and the claim carries its position through *Pending → Sanctioned →
-Paid*.
+bill is passed, the **amount admitted**. The claim carries its position through
+*Pending → Sanctioned → Paid*.
+
+### What the amounts mean
+
+The **amount admitted is final**. It is what the rules allow once the bill has
+been restricted, not a part payment — whatever the bill claimed over and above
+it is **disallowed** and is owed to nobody. So the register never shows the
+difference as a balance payable; it shows it as a deduction, which is what it
+is.
+
+Two figures follow from that, and they are kept apart because they answer
+different questions:
+
+* **Disallowed** — billed but not admissible. Counted only on claims that have
+  actually been examined. A bill still lying pending has nothing disallowed on
+  it yet; it simply has not been looked at, and the list says *not assessed*
+  rather than showing the whole bill as a deduction.
+* **Now payable** — the amount already **sanctioned** but not yet released.
+  This is the only figure the office genuinely owes, and it is what the two
+  reimbursement reports total at the foot.
+
+Claims not yet examined are counted separately again, as **awaiting
+assessment**, at the amount billed.
 
 While the date is being entered the form checks it against the hospital's
 empanelment and says so underneath. A bill for a day the hospital was outside
@@ -159,8 +180,9 @@ emergency away from station; choose *a hospital not on the empanelled list* and
 type the name.
 
 Above the list a totals bar keeps a running count of what has been claimed,
-what has been reimbursed and what is still outstanding, for whatever the
-filters are showing. **⭳ Download (.csv)** takes exactly that view as a
+what has been admitted, what was disallowed, what stands sanctioned but unpaid
+and how many claims are still to be examined — for whatever the filters are
+showing. **⭳ Download (.csv)** takes exactly that view as a
 spreadsheet, and **Voucher** prints one claim for the sanction file.
 
 Claims are numbered in two series that never collide — `HC/2026-27/0001` for a
@@ -177,14 +199,14 @@ assistant, the verifier and the sanctioning authority.
 * **Monthly Claim Register** — every claim treated in the month, with the two
   kinds totalled separately underneath.
 * **Annual Claim Statement** — the year month by month, cashless against
-  reimbursement, with the outstanding balance at the foot.
+  reimbursement, with what was admitted and what was disallowed.
 
 **Payment due**
 
-* **Hospital Reimbursement Report** — what is payable to each empanelled
-  hospital for cashless treatment: billed, paid, and balance.
-* **Staff Reimbursement Report** — what is payable to each member of staff on
-  bills already paid, with the family members treated.
+* **Hospital Reimbursement Report** — each empanelled hospital's cashless
+  treatment: billed, admitted, disallowed, already paid, and now payable.
+* **Staff Reimbursement Report** — the same for each member of staff on bills
+  already paid, with the family members treated.
 
 **One staff member / one hospital**
 

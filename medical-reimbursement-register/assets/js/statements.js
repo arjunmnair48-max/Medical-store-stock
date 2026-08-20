@@ -81,8 +81,8 @@
       { label: 'ID card no.', w: '9%' },
       { label: 'Hospital', w: '15%' },
       { label: 'Amount claimed', w: '8%', align: 'right' },
-      { label: 'Amount reimbursed', w: '8%', align: 'right' },
-      { label: 'Balance', w: '6%', align: 'right' },
+      { label: 'Amount admitted', w: '8%', align: 'right' },
+      { label: 'Disallowed', w: '6%', align: 'right' },
       { label: 'Status', w: '6%' }
     ];
 
@@ -93,6 +93,7 @@
       sl++;
       var claimed = Number(c.amountClaimed) || 0;
       var passed = Number(c.amountReimbursed) || 0;
+      var cut = Store.disallowedOn(c);
       var b = Store.claimant(c) || {};
       var age = Store.ageOf(b, c.treatFrom);
       rows.push([
@@ -108,7 +109,8 @@
         (c.diagnosis ? '<br><span class="rp-dim">' + esc(c.diagnosis) + '</span>' : ''),
         money(claimed),
         passed ? money(passed) : '',
-        claimed - passed ? money(claimed - passed) : '',
+        // nothing is disallowed on a claim nobody has examined yet
+        cut === null ? '<span class="rp-dim">—</span>' : (cut ? money(cut) : ''),
         esc(statusLabel(c))
       ]);
     });
@@ -116,28 +118,31 @@
     return P.table(cols, rows, {
       blanks: opts.blanks === undefined ? 4 : opts.blanks,
       total: ['', '', 'TOTAL', sl + ' claims', '', '', '', '',
-        money(t.claimed), money(t.reimbursed), money(t.balance), '']
+        money(t.claimed), money(t.reimbursed), money(t.disallowed), '']
     });
   }
 
   /** A short table of the two claim kinds side by side. */
   function typeSummary(list) {
     var cols = [
-      { label: 'Kind of claim', w: '40%' },
-      { label: 'No. of claims', w: '15%', align: 'right' },
+      { label: 'Kind of claim', w: '28%' },
+      { label: 'No. of claims', w: '10%', align: 'right' },
       { label: 'Amount claimed', w: '15%', align: 'right' },
-      { label: 'Amount reimbursed', w: '15%', align: 'right' },
-      { label: 'Outstanding', w: '15%', align: 'right' }
+      { label: 'Amount admitted', w: '15%', align: 'right' },
+      { label: 'Disallowed', w: '14%', align: 'right' },
+      { label: 'Sanctioned, not paid', w: '18%', align: 'right' }
     ];
     var rows = ['HOSPITAL', 'REIMB'].map(function (k) {
       var sub = list.filter(function (c) { return c.type === k; });
       var t = Store.claimTotals(sub);
-      return [Store.CLAIM_TYPES[k], t.count, money(t.claimed), money(t.reimbursed), money(t.balance)];
+      return [Store.CLAIM_TYPES[k], t.count, money(t.claimed), money(t.reimbursed),
+        money(t.disallowed), t.payable ? money(t.payable) : '—'];
     });
     var all = Store.claimTotals(list);
     return P.table(cols, rows, {
       blanks: 0,
-      total: ['TOTAL', all.count, money(all.claimed), money(all.reimbursed), money(all.balance)]
+      total: ['TOTAL', all.count, money(all.claimed), money(all.reimbursed),
+        money(all.disallowed), all.payable ? money(all.payable) : '—']
     });
   }
 
@@ -160,15 +165,16 @@
     var list = Store.claimList(p.filter);
 
     var cols = [
-      { label: 'Month', w: '14%' },
-      { label: 'Cashless — claims', w: '9%', align: 'right' },
-      { label: 'Cashless — billed', w: '12%', align: 'right' },
-      { label: 'Cashless — paid', w: '12%', align: 'right' },
-      { label: 'Reimbursement — claims', w: '9%', align: 'right' },
-      { label: 'Reimbursement — claimed', w: '12%', align: 'right' },
-      { label: 'Reimbursement — paid', w: '12%', align: 'right' },
-      { label: 'Total claimed', w: '10%', align: 'right' },
-      { label: 'Total paid', w: '10%', align: 'right' }
+      { label: 'Month', w: '13%' },
+      { label: 'Cashless — claims', w: '8%', align: 'right' },
+      { label: 'Cashless — billed', w: '11%', align: 'right' },
+      { label: 'Cashless — admitted', w: '11%', align: 'right' },
+      { label: 'Reimbursement — claims', w: '8%', align: 'right' },
+      { label: 'Reimbursement — claimed', w: '11%', align: 'right' },
+      { label: 'Reimbursement — admitted', w: '11%', align: 'right' },
+      { label: 'Total claimed', w: '9%', align: 'right' },
+      { label: 'Total admitted', w: '9%', align: 'right' },
+      { label: 'Disallowed', w: '9%', align: 'right' }
     ];
 
     // walk the year month by month so a month with no claim still prints
@@ -184,15 +190,17 @@
     }
 
     var rows = [];
-    var gc = { n: 0, cl: 0, pd: 0 }, gr = { n: 0, cl: 0, pd: 0 };
+    var gc = { n: 0, cl: 0, ad: 0 }, gr = { n: 0, cl: 0, ad: 0 }, gcut = 0;
 
     months.forEach(function (mo) {
       var inMonth = list.filter(function (c) { return Store.toMonth(Store.claimDate(c)) === mo; });
       var hosp = Store.claimTotals(inMonth.filter(function (c) { return c.type === 'HOSPITAL'; }));
       var reim = Store.claimTotals(inMonth.filter(function (c) { return c.type === 'REIMB'; }));
+      var cut = hosp.disallowed + reim.disallowed;
 
-      gc.n += hosp.count; gc.cl += hosp.claimed; gc.pd += hosp.reimbursed;
-      gr.n += reim.count; gr.cl += reim.claimed; gr.pd += reim.reimbursed;
+      gc.n += hosp.count; gc.cl += hosp.claimed; gc.ad += hosp.reimbursed;
+      gr.n += reim.count; gr.cl += reim.claimed; gr.ad += reim.reimbursed;
+      gcut += cut;
 
       rows.push([
         Store.monthName(mo),
@@ -201,10 +209,12 @@
         reim.count || '', reim.claimed ? money(reim.claimed) : '',
         reim.reimbursed ? money(reim.reimbursed) : '',
         (hosp.claimed + reim.claimed) ? money(hosp.claimed + reim.claimed) : '',
-        (hosp.reimbursed + reim.reimbursed) ? money(hosp.reimbursed + reim.reimbursed) : ''
+        (hosp.reimbursed + reim.reimbursed) ? money(hosp.reimbursed + reim.reimbursed) : '',
+        cut ? money(cut) : ''
       ]);
     });
 
+    var whole = Store.claimTotals(list);
     var staffCount = Store.claimsByStaff(p.filter).length;
     var hospCount = Store.claimsByHospital(p.filter)
       .filter(function (r) { return r.claims.some(function (c) { return c.type === 'HOSPITAL'; }); }).length;
@@ -212,14 +222,22 @@
     return P.header('Annual Claim Statement', p.label) +
       P.table(cols, rows, {
         blanks: 0,
-        total: ['TOTAL', gc.n, money(gc.cl), money(gc.pd), gr.n, money(gr.cl), money(gr.pd),
-          money(gc.cl + gr.cl), money(gc.pd + gr.pd)]
+        total: ['TOTAL', gc.n, money(gc.cl), money(gc.ad), gr.n, money(gr.cl), money(gr.ad),
+          money(gc.cl + gr.cl), money(gc.ad + gr.ad), money(gcut)]
       }) +
       '<div class="rp-section">For the year as a whole</div>' +
       typeSummary(list) +
       '<div class="rp-note">' + staffCount + ' staff member(s) drew medical benefit during the ' +
-      'year, and ' + hospCount + ' empanelled hospital(s) were billed. Outstanding balance as on ' +
-      'the date of this statement: <b>' + money(Store.claimTotals(list).balance) + '</b>.</div>' +
+      'year, and ' + hospCount + ' empanelled hospital(s) were billed. Of ' +
+      money(whole.claimed) + ' claimed, <b>' + money(whole.reimbursed) + '</b> was admitted ' +
+      'and ' + money(whole.disallowed) + ' disallowed under the rules. ' +
+      (whole.payable
+        ? '<b>' + money(whole.payable) + '</b> stands sanctioned and is yet to be released. '
+        : 'Nothing sanctioned is awaiting release. ') +
+      (whole.awaitingCount
+        ? whole.awaitingCount + ' claim(s) billing ' + money(whole.awaiting) +
+          ' are still to be examined.'
+        : 'No claim is left to be examined.') + '</div>' +
       P.footer();
   }
 
@@ -240,7 +258,8 @@
       var bt = Store.claimTotals(mine);
       return [esc(b.name), esc(b.relation), age === '' ? '—' : num(age),
         esc(b.idCardNo || '—'), bt.count || '', bt.claimed ? money(bt.claimed) : '',
-        bt.reimbursed ? money(bt.reimbursed) : ''];
+        bt.reimbursed ? money(bt.reimbursed) : '',
+        bt.disallowed ? money(bt.disallowed) : ''];
     });
 
     return P.header('Individual Claim Statement',
@@ -257,17 +276,21 @@
         { label: 'Dependency', w: '14%' },
         { label: 'Age', w: '8%', align: 'right' },
         { label: 'ID card no.', w: '16%' },
-        { label: 'Claims', w: '8%', align: 'right' },
-        { label: 'Amount claimed', w: '14%', align: 'right' },
-        { label: 'Amount reimbursed', w: '14%', align: 'right' }
+        { label: 'Claims', w: '7%', align: 'right' },
+        { label: 'Amount claimed', w: '13%', align: 'right' },
+        { label: 'Amount admitted', w: '13%', align: 'right' },
+        { label: 'Disallowed', w: '11%', align: 'right' }
       ], fam, {
         blanks: 1,
-        total: ['TOTAL', '', '', '', t.count, money(t.claimed), money(t.reimbursed)]
+        total: ['TOTAL', '', '', '', t.count, money(t.claimed), money(t.reimbursed),
+          money(t.disallowed)]
       }) +
       '<div class="rp-section">Claims during the period</div>' +
       claimTable(list, { blanks: 2 }) +
-      P.footer('Certified that ' + s.name + ' has drawn medical benefit of ' +
-        money(t.reimbursed) + ' during ' + p.label + '.');
+      P.footer('Certified that ' + s.name + ' has been admitted medical benefit of ' +
+        money(t.reimbursed) + ' during ' + p.label + ', against ' + money(t.claimed) +
+        ' claimed' + (t.disallowed ? ', ' + money(t.disallowed) + ' having been disallowed' : '') +
+        '.');
   }
 
   /* ---------------- one hospital ---------------- */
@@ -308,7 +331,9 @@
       '<div class="rp-section">Claims treated at this hospital</div>' +
       claimTable(list, { blanks: 3 }) +
       P.footer('Total billed by this hospital during ' + p.label + ': ' + money(t.claimed) +
-        ', of which ' + money(t.reimbursed) + ' has been paid.');
+        ', of which ' + money(t.reimbursed) + ' was admitted and ' + money(t.disallowed) +
+        ' disallowed. ' + (t.payable ? money(t.payable) + ' stands sanctioned and is yet to be ' +
+          'released.' : 'Nothing sanctioned is awaiting release.'));
   }
 
   /* ---------------- the two payee reports ---------------- */
@@ -329,45 +354,61 @@
 
     var cols = [
       { label: 'Sl.', w: '4%', align: 'center' },
-      { label: 'Name of hospital', w: '22%' },
-      { label: 'Place', w: '11%' },
-      { label: 'Empanelled upto', w: '10%', align: 'center' },
-      { label: 'No. of claims', w: '7%', align: 'right' },
-      { label: 'Patients', w: '7%', align: 'right' },
-      { label: 'Amount billed', w: '13%', align: 'right' },
-      { label: 'Amount paid', w: '13%', align: 'right' },
-      { label: 'Balance payable', w: '13%', align: 'right' }
+      { label: 'Name of hospital', w: '19%' },
+      { label: 'Place', w: '9%' },
+      { label: 'Empanelled upto', w: '8%', align: 'center' },
+      { label: 'No. of claims', w: '6%', align: 'right' },
+      { label: 'Patients', w: '6%', align: 'right' },
+      { label: 'Amount billed', w: '11%', align: 'right' },
+      { label: 'Amount admitted', w: '11%', align: 'right' },
+      { label: 'Disallowed', w: '9%', align: 'right' },
+      { label: 'Already paid', w: '9%', align: 'right' },
+      { label: 'Now payable', w: '8%', align: 'right' }
     ];
 
-    var rows = [], sl = 0, tc = 0, tb = 0, tp = 0;
+    var rows = [], sl = 0;
+    var tc = 0, tb = 0, tad = 0, tcut = 0, tpaid = 0, tpay = 0;
+
     groups.forEach(function (g) {
       sl++;
       var h = g.hospital;
+      var t = g.totals;
       var patients = {};
       g.claims.forEach(function (c) { patients[c.beneficiaryId || c.benName] = true; });
-      tc += g.totals.count; tb += g.totals.claimed; tp += g.totals.reimbursed;
+
+      tc += t.count; tb += t.claimed; tad += t.reimbursed;
+      tcut += t.disallowed; tpaid += t.paid; tpay += t.payable;
+
       rows.push([
         sl,
         '<b>' + esc(g.name) + '</b>' +
-        (h && h.orderNo ? '<br><span class="rp-dim">order ' + esc(h.orderNo) + '</span>' : ''),
+        (h && h.orderNo ? '<br><span class="rp-dim">order ' + esc(h.orderNo) + '</span>' : '') +
+        (t.awaitingCount
+          ? '<br><span class="rp-dim">' + t.awaitingCount + ' bill(s) still to be examined</span>'
+          : ''),
         esc(h ? (h.city || '—') : '—'),
         h && h.empanelTo ? dmy(h.empanelTo) : '—',
-        g.totals.count,
+        t.count,
         Object.keys(patients).length,
-        money(g.totals.claimed),
-        money(g.totals.reimbursed),
-        g.totals.balance ? money(g.totals.balance) : '—'
+        money(t.claimed),
+        money(t.reimbursed),
+        t.disallowed ? money(t.disallowed) : '—',
+        t.paid ? money(t.paid) : '—',
+        t.payable ? '<b>' + money(t.payable) + '</b>' : '—'
       ]);
     });
 
     return P.header('Hospital Reimbursement Report',
-      'Payment due to empanelled hospitals for cashless treatment  ·  ' + p.label) +
+      'Cashless treatment billed by empanelled hospitals  ·  ' + p.label) +
       P.table(cols, rows, {
         blanks: 3,
-        total: ['', 'TOTAL', '', '', tc, '', money(tb), money(tp), money(tb - tp)]
+        total: ['', 'TOTAL', '', '', tc, '', money(tb), money(tad), money(tcut),
+          money(tpaid), money(tpay)]
       }) +
       P.footer('Certified that the bills of the hospitals listed above have been verified and ' +
-        'the balance shown is payable.');
+        'that the amount admitted is the amount finally payable under the rules. ' +
+        (tpay ? money(tpay) + ' stands sanctioned and is yet to be released.'
+          : 'Nothing sanctioned is awaiting release.'));
   }
 
   /**
@@ -385,21 +426,26 @@
 
     var cols = [
       { label: 'Sl.', w: '4%', align: 'center' },
-      { label: 'Emp. No.', w: '8%' },
-      { label: 'Name of staff', w: '18%' },
-      { label: 'Designation', w: '13%' },
-      { label: 'ID card no.', w: '10%' },
-      { label: 'Treated persons', w: '14%' },
-      { label: 'No. of claims', w: '6%', align: 'right' },
+      { label: 'Emp. No.', w: '7%' },
+      { label: 'Name of staff', w: '15%' },
+      { label: 'Designation', w: '11%' },
+      { label: 'ID card no.', w: '8%' },
+      { label: 'Treated persons', w: '13%' },
+      { label: 'No. of claims', w: '5%', align: 'right' },
       { label: 'Amount claimed', w: '9%', align: 'right' },
-      { label: 'Amount reimbursed', w: '9%', align: 'right' },
-      { label: 'Balance payable', w: '9%', align: 'right' }
+      { label: 'Amount admitted', w: '9%', align: 'right' },
+      { label: 'Disallowed', w: '8%', align: 'right' },
+      { label: 'Already paid', w: '8%', align: 'right' },
+      { label: 'Now payable', w: '8%', align: 'right' }
     ];
 
-    var rows = [], sl = 0, tc = 0, tcl = 0, tp = 0;
+    var rows = [], sl = 0;
+    var tc = 0, tcl = 0, tad = 0, tcut = 0, tpaid = 0, tpay = 0;
+
     groups.forEach(function (g) {
       sl++;
       var s = g.staff || {};
+      var t = g.totals;
       var names = {};
       g.claims.forEach(function (c) {
         var b = Store.claimant(c) || {};
@@ -409,17 +455,24 @@
         return esc(n) + ' <span class="rp-dim">(' + esc(names[n]) + ')</span>';
       }).join('<br>');
 
-      tc += g.totals.count; tcl += g.totals.claimed; tp += g.totals.reimbursed;
+      tc += t.count; tcl += t.claimed; tad += t.reimbursed;
+      tcut += t.disallowed; tpaid += t.paid; tpay += t.payable;
+
       rows.push([
         sl, esc(s.empNo || '—'),
-        '<b>' + esc(g.name) + '</b>',
+        '<b>' + esc(g.name) + '</b>' +
+        (t.awaitingCount
+          ? '<br><span class="rp-dim">' + t.awaitingCount + ' claim(s) still to be examined</span>'
+          : ''),
         esc(s.designation || '—'),
         esc(s.idCardNo || '—'),
         whoList || '—',
-        g.totals.count,
-        money(g.totals.claimed),
-        money(g.totals.reimbursed),
-        g.totals.balance ? money(g.totals.balance) : '—'
+        t.count,
+        money(t.claimed),
+        money(t.reimbursed),
+        t.disallowed ? money(t.disallowed) : '—',
+        t.paid ? money(t.paid) : '—',
+        t.payable ? '<b>' + money(t.payable) + '</b>' : '—'
       ]);
     });
 
@@ -427,10 +480,13 @@
       'Reimbursement of treatment expenses to staff  ·  ' + p.label) +
       P.table(cols, rows, {
         blanks: 3,
-        total: ['', '', 'TOTAL', '', '', '', tc, money(tcl), money(tp), money(tcl - tp)]
+        total: ['', '', 'TOTAL', '', '', '', tc, money(tcl), money(tad), money(tcut),
+          money(tpaid), money(tpay)]
       }) +
-      P.footer('Certified that the claims listed above are admissible and the balance shown ' +
-        'is payable to the staff members concerned.');
+      P.footer('Certified that the claims listed above are admissible to the extent shown and ' +
+        'that the amount admitted is final under the rules. ' +
+        (tpay ? money(tpay) + ' stands sanctioned and is yet to be released to the staff ' +
+          'members concerned.' : 'Nothing sanctioned is awaiting release.'));
   }
 
   /* ---------------- the two master lists ---------------- */
@@ -548,6 +604,7 @@
     var cashless = c.type !== 'REIMB';
     var claimed = Number(c.amountClaimed) || 0;
     var passed = Number(c.amountReimbursed) || 0;
+    var cut = Store.disallowedOn(c);
     var age = Store.ageOf(b, c.treatFrom);
 
     return P.slipHead(cashless ? 'Medical Claim — Cashless Treatment'
@@ -576,10 +633,11 @@
       '<table class="rp-table slip-table"><tbody>' +
       '<tr><td style="width:60%">Amount claimed</td>' +
       '<td class="ta-right"><b>' + money(claimed) + '</b></td></tr>' +
-      '<tr><td>Amount admitted / reimbursed</td>' +
+      '<tr><td>Amount admitted after restriction — final</td>' +
       '<td class="ta-right"><b>' + money(passed) + '</b></td></tr>' +
-      '<tr><td>Amount disallowed</td>' +
-      '<td class="ta-right">' + money(claimed - passed) + '</td></tr>' +
+      '<tr><td>Amount disallowed under the rules</td>' +
+      '<td class="ta-right">' + (cut === null
+        ? '<span class="rp-dim">not assessed yet</span>' : money(cut)) + '</td></tr>' +
       '<tr><td>Sanction no. / date</td><td class="ta-right">' +
       esc(c.sanctionNo || '—') + (c.sanctionDate ? ' · ' + dmy(c.sanctionDate) : '') + '</td></tr>' +
       '<tr><td>Payment released on</td><td class="ta-right">' +
@@ -663,7 +721,7 @@
     function claimRows(list) {
       var out = [['Date of treatment', 'Treated upto', 'Claim No', 'Type', 'Staff', 'Emp No',
         'Name', 'Dependency', 'ID card no', 'Age', 'Hospital', 'Diagnosis / treatment',
-        'Bill no', 'Amount claimed', 'Amount reimbursed', 'Balance', 'Status',
+        'Bill no', 'Amount claimed', 'Amount admitted', 'Amount disallowed', 'Status',
         'Sanction no', 'Date of payment', 'Remarks']];
       list.slice().reverse().forEach(function (c) {
         var b = Store.claimant(c) || {};
@@ -672,7 +730,7 @@
           s.name || '', s.empNo || '', b.name || '', b.relation || '', b.idCardNo || '',
           Store.ageOf(b, c.treatFrom), hospitalName(c), c.diagnosis || '', c.billNo || '',
           money0(c.amountClaimed), money0(c.amountReimbursed),
-          money0(c.amountClaimed) - money0(c.amountReimbursed),
+          Store.disallowedOn(c) === null ? '' : Store.disallowedOn(c),
           statusLabel(c), c.sanctionNo || '', c.paidDate || '', c.remarks || '']);
       });
       return out;
@@ -688,9 +746,9 @@
 
       case 'annual':
         name = 'claims-annual-' + ((ctx && ctx.fy) || Store.currentFy());
-        rows = [['Month', 'Cashless claims', 'Cashless billed', 'Cashless paid',
-          'Reimbursement claims', 'Reimbursement claimed', 'Reimbursement paid',
-          'Total claimed', 'Total paid']];
+        rows = [['Month', 'Cashless claims', 'Cashless billed', 'Cashless admitted',
+          'Reimbursement claims', 'Reimbursement claimed', 'Reimbursement admitted',
+          'Total claimed', 'Total admitted', 'Disallowed']];
         var list = Store.claimList(p.filter);
         var byMonth = {};
         list.forEach(function (c) {
@@ -702,7 +760,8 @@
           var reim = Store.claimTotals(byMonth[m].filter(function (c) { return c.type === 'REIMB'; }));
           rows.push([Store.monthName(m), hosp.count, hosp.claimed, hosp.reimbursed,
             reim.count, reim.claimed, reim.reimbursed,
-            hosp.claimed + reim.claimed, hosp.reimbursed + reim.reimbursed]);
+            hosp.claimed + reim.claimed, hosp.reimbursed + reim.reimbursed,
+            hosp.disallowed + reim.disallowed]);
         });
         break;
 
@@ -725,28 +784,32 @@
       case 'hospital-reimb':
         name = 'hospital-reimbursement';
         rows = [['Hospital', 'Place', 'Order no', 'Empanelled from', 'Empanelled upto',
-          'No of claims', 'Amount billed', 'Amount paid', 'Balance payable']];
+          'No of claims', 'Amount billed', 'Amount admitted', 'Amount disallowed',
+          'Already paid', 'Now payable', 'Claims still to be examined']];
         Store.claimsByHospital(p.filter).forEach(function (g) {
           var only = g.claims.filter(function (c) { return c.type === 'HOSPITAL'; });
           if (!only.length) return;
           var t = Store.claimTotals(only);
           var hh = g.hospital || {};
           rows.push([g.name, hh.city || '', hh.orderNo || '', hh.empanelFrom || '',
-            hh.empanelTo || '', t.count, t.claimed, t.reimbursed, t.balance]);
+            hh.empanelTo || '', t.count, t.claimed, t.reimbursed, t.disallowed,
+            t.paid, t.payable, t.awaitingCount]);
         });
         break;
 
       case 'staff-reimb':
         name = 'staff-reimbursement';
         rows = [['Emp No', 'Name of staff', 'Designation', 'ID card no',
-          'No of claims', 'Amount claimed', 'Amount reimbursed', 'Balance payable']];
+          'No of claims', 'Amount claimed', 'Amount admitted', 'Amount disallowed',
+          'Already paid', 'Now payable', 'Claims still to be examined']];
         Store.claimsByStaff(p.filter).forEach(function (g) {
           var only = g.claims.filter(function (c) { return c.type === 'REIMB'; });
           if (!only.length) return;
           var t = Store.claimTotals(only);
           var ss = g.staff || {};
           rows.push([ss.empNo || '', g.name, ss.designation || '', ss.idCardNo || '',
-            t.count, t.claimed, t.reimbursed, t.balance]);
+            t.count, t.claimed, t.reimbursed, t.disallowed, t.paid, t.payable,
+            t.awaitingCount]);
         });
         break;
 

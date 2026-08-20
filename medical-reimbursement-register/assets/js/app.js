@@ -43,19 +43,27 @@
     var year = Store.claimTotals(Store.claimList({ fy: fy }));
     var cashless = Store.claimTotals(Store.claimList({ fy: fy, type: 'HOSPITAL' }));
     var reimb = Store.claimTotals(Store.claimList({ fy: fy, type: 'REIMB' }));
-    var due = Store.claimTotals(Store.claimsPending({ fy: fy }));
 
+    // What is genuinely owed is the amount already sanctioned and not yet
+    // released — never the gap between the bill and what was admitted, which
+    // is a deduction under the rules and is owed to nobody.
     var cards = [
       { k: 'Staff on register', v: staff.length, s: serving + ' serving · ' + deps + ' dependents', cls: '' },
       { k: 'Empanelled hospitals', v: live, s: empanelDue ? empanelDue + ' need an extension order' : 'all in force',
         cls: empanelDue ? 'warn' : live ? 'good' : '' },
       { k: 'Claims this month', v: month.count, s: UI.money(month.claimed) + ' claimed', cls: '' },
       { k: 'Claims this year', v: year.count, s: Store.fyName(fy), cls: '' },
-      { k: 'Cashless — hospitals', v: UI.money(cashless.claimed), s: UI.money(cashless.reimbursed) + ' paid', cls: '' },
-      { k: 'Reimbursement — staff', v: UI.money(reimb.claimed), s: UI.money(reimb.reimbursed) + ' paid', cls: '' },
-      { k: 'Reimbursed this year', v: UI.money(year.reimbursed), s: 'of ' + UI.money(year.claimed) + ' claimed', cls: 'good' },
-      { k: 'Outstanding', v: UI.money(due.balance), s: due.count + ' claim(s) still to be settled',
-        cls: due.count ? 'warn' : 'good' }
+      { k: 'Cashless — hospitals', v: UI.money(cashless.reimbursed),
+        s: 'admitted of ' + UI.money(cashless.claimed) + ' billed', cls: '' },
+      { k: 'Reimbursement — staff', v: UI.money(reimb.reimbursed),
+        s: 'admitted of ' + UI.money(reimb.claimed) + ' claimed', cls: '' },
+      { k: 'Admitted this year', v: UI.money(year.reimbursed),
+        s: UI.money(year.disallowed) + ' disallowed under the rules', cls: 'good' },
+      { k: 'Sanctioned, not paid', v: UI.money(year.payable),
+        s: 'payment yet to be released', cls: year.payable ? 'warn' : 'good' },
+      { k: 'Awaiting assessment', v: year.awaitingCount,
+        s: UI.money(year.awaiting) + ' billed, not yet examined',
+        cls: year.awaitingCount ? 'warn' : 'good' }
     ];
 
     UI.$('#statGrid').innerHTML = cards.map(function (c) {
@@ -82,14 +90,19 @@
     stats();
     UI.$('#brandOffice').textContent = Store.settings().officeName || 'Medical Centre';
 
+    // a pending claim is shown at what it billed, because nothing has been
+    // admitted on it yet; a sanctioned one at what is actually to be released
     miniList(UI.$('#pendingList'), Store.claimsPending().slice(0, 12).map(function (c) {
       var b = Store.claimant(c) || {};
-      var bal = (Number(c.amountClaimed) || 0) - (Number(c.amountReimbursed) || 0);
+      var waiting = (c.status || 'PENDING') === 'PENDING';
       return {
         main: '<b>' + UI.esc(b.name || '—') + '</b> <span class="dim">' +
-          UI.esc(Store.CLAIM_TYPE_SHORT[c.type] || '') + ' · ' + UI.esc(c.no || '') + '</span>',
-        side: UI.money(bal),
-        cls: (c.status || 'PENDING') === 'PENDING' ? 'warn' : ''
+          UI.esc(Store.CLAIM_TYPE_SHORT[c.type] || '') + ' · ' +
+          (waiting ? 'to be examined' : 'to be released') + '</span>',
+        side: waiting
+          ? UI.money(c.amountClaimed) + ' billed'
+          : UI.money(c.amountReimbursed),
+        cls: waiting ? 'warn' : 'good'
       };
     }), 'No claim is waiting to be settled. 👍');
 
@@ -109,18 +122,20 @@
         return {
           main: '<b>' + UI.esc(g.name) + '</b> <span class="dim">' +
             g.totals.count + ' claim' + (g.totals.count === 1 ? '' : 's') + '</span>',
-          side: UI.money(g.totals.claimed),
+          side: UI.money(g.totals.reimbursed),
           cls: ''
         };
       }), 'No claim drawn this year yet.');
 
     miniList(UI.$('#recentList'), Store.claimList().slice(0, 10).map(function (c) {
       var b = Store.claimant(c) || {};
+      var done = (c.status || 'PENDING') === 'PAID';
       return {
         main: '<b>' + UI.esc(b.name || '—') + '</b> <span class="dim">' +
           UI.esc(c.hospitalName || '') + '</span>',
-        side: UI.money(c.amountClaimed) + '  ·  ' + UI.dmy(c.treatFrom),
-        cls: (c.status || 'PENDING') === 'PAID' ? 'good' : ''
+        side: (done ? UI.money(c.amountReimbursed) + ' admitted'
+          : UI.money(c.amountClaimed) + ' claimed') + '  ·  ' + UI.dmy(c.treatFrom),
+        cls: done ? 'good' : ''
       };
     }), 'No claim recorded yet. Enter the first one in Medical Claims.');
   }
@@ -261,7 +276,7 @@
       { s: 0, b: 1, h: 1, type: 'HOSPITAL', d: -20, days: 1, dx: 'Cataract — left eye',
         claimed: 38000, passed: 0, status: 'PENDING', bill: 'SE/2026/331' },
       { s: 2, b: 1, h: 2, type: 'HOSPITAL', d: -8, days: 3, dx: 'Hypertension — evaluation',
-        claimed: 17800, passed: 0, status: 'SANCTIONED', bill: 'ST/2026/552' },
+        claimed: 17800, passed: 16200, status: 'SANCTIONED', bill: 'ST/2026/552' },
       { s: 1, b: 0, h: 3, type: 'REIMB', d: -70, days: 1, dx: 'Root canal treatment',
         claimed: 9500, passed: 7000, status: 'PAID', bill: 'LD/771' },
       { s: 2, b: 0, h: -1, type: 'REIMB', d: -35, days: 1, dx: 'Emergency treatment while on tour',

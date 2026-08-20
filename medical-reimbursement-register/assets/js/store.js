@@ -592,17 +592,58 @@
     return prefix + String(max + 1).padStart(4, '0');
   }
 
+  /**
+   * Totals for a set of claims.
+   *
+   * The amount reimbursed is what the rules finally admit — it is not an
+   * instalment. Whatever the bill claimed over and above it is disallowed,
+   * and nobody owes the difference. So the difference only means anything
+   * once a claim has actually been examined: on one still lying pending it
+   * is simply not assessed yet, and counting it as disallowed would
+   * overstate the deduction by the whole value of every unexamined bill.
+   *
+   *   claimed    — billed, before the rules are applied
+   *   reimbursed — admitted after restriction, the final figure
+   *   disallowed — billed but not admissible, over examined claims only
+   *   payable    — admitted and sanctioned, payment not yet released
+   *   paid       — payment released
+   *   awaiting   — claims not examined yet, at the amount billed
+   */
   function claimTotals(list) {
-    var t = { count: (list || []).length, claimed: 0, reimbursed: 0, balance: 0, pending: 0 };
+    var t = {
+      count: (list || []).length,
+      claimed: 0, reimbursed: 0, disallowed: 0,
+      payable: 0, paid: 0,
+      awaiting: 0, awaitingCount: 0, pending: 0
+    };
     (list || []).forEach(function (c) {
-      var cl = Number(c.amountClaimed) || 0;
-      var rb = Number(c.amountReimbursed) || 0;
-      t.claimed += cl;
-      t.reimbursed += rb;
-      if ((c.status || 'PENDING') === 'PENDING') t.pending += 1;
+      var billed = Number(c.amountClaimed) || 0;
+      var admitted = Number(c.amountReimbursed) || 0;
+      var st = c.status || 'PENDING';
+
+      t.claimed += billed;
+      t.reimbursed += admitted;
+
+      if (st === 'PENDING') {
+        t.awaiting += billed;
+        t.awaitingCount += 1;
+        t.pending += 1;
+        return;
+      }
+      t.disallowed += Math.max(0, billed - admitted);
+      if (st === 'PAID') t.paid += admitted;
+      else if (st === 'SANCTIONED') t.payable += admitted;
     });
-    t.balance = t.claimed - t.reimbursed;
     return t;
+  }
+
+  /** Has this claim been examined, so its deduction is a real one? */
+  function isAssessed(c) { return (c && c.status || 'PENDING') !== 'PENDING'; }
+
+  /** What a single claim had knocked off it, or null while it is unexamined. */
+  function disallowedOn(c) {
+    if (!isAssessed(c)) return null;
+    return Math.max(0, (Number(c.amountClaimed) || 0) - (Number(c.amountReimbursed) || 0));
   }
 
   /** Claim totals rolled up per staff member, biggest first. */
@@ -620,7 +661,7 @@
         claims: by[k],
         totals: claimTotals(by[k])
       };
-    }).sort(function (a, b) { return b.totals.claimed - a.totals.claimed; });
+    }).sort(function (a, b) { return b.totals.reimbursed - a.totals.reimbursed; });
   }
 
   /** Claim totals rolled up per hospital, biggest first. */
@@ -687,6 +728,7 @@
 
     claimList: claimList, claim: claim, saveClaim: saveClaim, deleteClaim: deleteClaim,
     nextClaimNo: nextClaimNo, claimDate: claimDate, claimTotals: claimTotals,
+    isAssessed: isAssessed, disallowedOn: disallowedOn,
     claimsByStaff: claimsByStaff, claimsByHospital: claimsByHospital,
     claimsPending: claimsPending,
 
