@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Medical Reimbursement Register</title>
+<link rel="stylesheet" href="assets/css/app.css" />
+<link rel="stylesheet" href="assets/css/print.css" media="print" />
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ================= SIDEBAR ================= -->
+  <aside class="sidebar no-print">
+    <div class="brand">
+      <div class="brand-mark">₹</div>
+      <div>
+        <div class="brand-name">Reimbursement</div>
+        <div class="brand-sub" id="brandOffice">Medical Centre</div>
+      </div>
+    </div>
+
+    <nav class="nav">
+      <button class="nav-item active" data-view="dashboard"><span>▤</span> Dashboard</button>
+      <button class="nav-item" data-view="staff"><span>👤</span> Staff &amp; Dependents</button>
+      <button class="nav-item" data-view="hospitals"><span>🏥</span> Empanelled Hospitals</button>
+      <button class="nav-item" data-view="claims"><span>₹</span> Medical Claims</button>
+      <button class="nav-item" data-view="reports"><span>🖶</span> Reports</button>
+      <button class="nav-item" data-view="settings"><span>⚒</span> Settings &amp; Backup</button>
+    </nav>
+
+    <div class="sidebar-foot">
+      <div class="hint" id="sidebarHint">Data is stored in this browser.<br />Take a backup regularly.</div>
+      <div class="hint" id="appVersion"></div>
+    </div>
+  </aside>
+
+  <!-- ================= MAIN ================= -->
+  <main class="main">
+
+    <!-- ---------- DASHBOARD ---------- -->
+    <section class="view" id="view-dashboard">
+      <header class="page-head no-print">
+        <div>
+          <h1>Dashboard</h1>
+          <p class="muted">Medical claims — position as on today</p>
+        </div>
+        <div class="head-actions">
+          <button class="btn" data-goto="staff">+ Staff Member</button>
+          <button class="btn primary" data-goto="claims">+ New Claim</button>
+        </div>
+      </header>
+
+      <div class="stat-grid" id="statGrid"></div>
+
+      <div class="split">
+        <div class="card">
+          <div class="card-head">
+            <h2>Claims pending settlement</h2>
+            <button class="link" data-goto="claims">Open register</button>
+          </div>
+          <div id="pendingList" class="mini-list"></div>
+        </div>
+        <div class="card">
+          <div class="card-head">
+            <h2>Empanelment running out</h2>
+            <button class="link" data-report="empanelled">Print list</button>
+          </div>
+          <div id="empanelList" class="mini-list"></div>
+        </div>
+      </div>
+
+      <div class="split">
+        <div class="card">
+          <div class="card-head">
+            <h2>Drawn most this year</h2>
+            <button class="link" data-report="staff-reimb">Staff report</button>
+          </div>
+          <div id="topStaffList" class="mini-list"></div>
+        </div>
+        <div class="card">
+          <div class="card-head">
+            <h2>Latest claims</h2>
+            <button class="link" data-report="monthly">Monthly register</button>
+          </div>
+          <div id="recentList" class="mini-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- STAFF & DEPENDENTS ---------- -->
+    <section class="view hidden" id="view-staff">
+      <header class="page-head no-print">
+        <div>
+          <h1>Staff &amp; Dependents</h1>
+          <p class="muted">Everyone entitled to medical benefit, with the family covered by each card</p>
+        </div>
+        <div class="head-actions">
+          <button class="btn" data-report="staff-register">🖶 Print register</button>
+          <button class="btn primary" data-goto="claims">+ New Claim</button>
+        </div>
+      </header>
+
+      <div class="card" id="stfFormCard">
+        <div class="card-head"><h2 id="stfFormTitle">Add Staff Member</h2></div>
+        <form id="stfForm" class="form-grid">
+          <input type="hidden" name="id" />
+          <label class="fld">
+            <span>Employee No.</span>
+            <input type="text" name="empNo" placeholder="e.g. 4471" />
+          </label>
+          <label class="fld wide">
+            <span>Name of staff member <b>*</b></span>
+            <input type="text" name="name" required />
+          </label>
+          <label class="fld">
+            <span>ID card no.</span>
+            <input type="text" name="idCardNo" placeholder="Medical card / token no." />
+          </label>
+          <label class="fld">
+            <span>Designation</span>
+            <input type="text" name="designation" />
+          </label>
+          <label class="fld">
+            <span>Department / Section</span>
+            <input type="text" name="department" />
+          </label>
+          <label class="fld">
+            <span>Station / Office</span>
+            <input type="text" name="station" />
+          </label>
+          <label class="fld">
+            <span>Date of birth</span>
+            <input type="date" name="dob" />
+          </label>
+          <label class="fld">
+            <span>Age</span>
+            <input type="number" name="age" min="0" max="130" placeholder="if no date of birth" />
+          </label>
+          <label class="fld">
+            <span>Sex</span>
+            <select name="gender">
+              <option value="">—</option>
+              <option>Female</option>
+              <option>Male</option>
+              <option>Other</option>
+            </select>
+          </label>
+          <label class="fld">
+            <span>Mobile</span>
+            <input type="text" name="mobile" />
+          </label>
+          <label class="fld">
+            <span>Status</span>
+            <select name="status">
+              <option>Serving</option>
+              <option>Retired</option>
+              <option>Transferred</option>
+              <option>Deceased</option>
+            </select>
+          </label>
+          <label class="fld wide">
+            <span>Remarks</span>
+            <input type="text" name="remarks" />
+          </label>
+
+          <div class="dep-block">
+            <div class="dep-block-head">
+              <span>Dependents covered by this card</span>
+              <span class="hint">Age fills in on its own once a date of birth is given</span>
+            </div>
+            <div class="dep-line dep-line-head">
+              <span>Name of dependent</span>
+              <span>Dependency</span>
+              <span>Date of birth</span>
+              <span>Age</span>
+              <span>Card / token no.</span>
+              <span></span>
+            </div>
+            <div id="stfDeps"></div>
+            <button type="button" class="btn" id="stfAddDep">+ Add another dependent</button>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn hidden" id="stfCancelEdit">Cancel edit</button>
+            <button type="submit" class="btn primary" id="stfSaveBtn">Save Staff &amp; Family</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="toolbar">
+        <div class="tabs" id="stfTabs">
+          <button class="tab active" data-status="all">All</button>
+          <button class="tab" data-status="Serving">Serving</button>
+          <button class="tab" data-status="Retired">Retired</button>
+        </div>
+        <input class="search" id="stfSearch" type="search" placeholder="Search name, employee no, card no, dependent…" />
+      </div>
+
+      <div class="card flush">
+        <div class="table-wrap"><table class="grid" id="stfTable"></table></div>
+      </div>
+      <p class="muted small" id="stfCount"></p>
+    </section>
+
+    <!-- ---------- EMPANELLED HOSPITALS ---------- -->
+    <section class="view hidden" id="view-hospitals">
+      <header class="page-head no-print">
+        <div>
+          <h1>Empanelled Hospitals</h1>
+          <p class="muted">The hospitals cashless treatment is admissible at, and the period each empanelment runs for</p>
+        </div>
+        <div class="head-actions">
+          <button class="btn" id="hosSampleCsv">⭳ Sample list</button>
+          <button class="btn" id="hosImport">⭱ Upload list (.csv)</button>
+          <input type="file" id="hosImportFile" accept=".csv,text/csv" class="hidden" />
+          <button class="btn" data-report="empanelled">🖶 Print list</button>
+        </div>
+      </header>
+
+      <div class="card" id="hosFormCard">
+        <div class="card-head"><h2 id="hosFormTitle">Add Empanelled Hospital</h2></div>
+        <form id="hosForm" class="form-grid">
+          <input type="hidden" name="id" />
+          <label class="fld wide">
+            <span>Name of hospital <b>*</b></span>
+            <input type="text" name="name" required />
+          </label>
+          <label class="fld">
+            <span>Place / City</span>
+            <input type="text" name="city" />
+          </label>
+          <label class="fld wide">
+            <span>Address</span>
+            <input type="text" name="address" />
+          </label>
+          <label class="fld">
+            <span>Phone</span>
+            <input type="text" name="phone" />
+          </label>
+          <label class="fld">
+            <span>E-mail</span>
+            <input type="text" name="email" />
+          </label>
+          <label class="fld">
+            <span>Specialty</span>
+            <input type="text" name="specialty" placeholder="e.g. Multi-speciality, Ophthalmology" />
+          </label>
+          <label class="fld">
+            <span>Category</span>
+            <select name="category">
+              <option value="">—</option>
+              <option>Multi-speciality</option>
+              <option>Single speciality</option>
+              <option>General hospital</option>
+              <option>Diagnostic centre</option>
+              <option>Dental</option>
+              <option>Eye</option>
+            </select>
+          </label>
+          <label class="fld">
+            <span>Empanelment order no.</span>
+            <input type="text" name="orderNo" />
+          </label>
+          <label class="fld">
+            <span>Empanelled from</span>
+            <input type="date" name="empanelFrom" />
+          </label>
+          <label class="fld">
+            <span>Valid upto</span>
+            <input type="date" name="empanelTo" />
+          </label>
+          <label class="fld">
+            <span>Status</span>
+            <select name="status">
+              <option>Empanelled</option>
+              <option>De-empanelled</option>
+            </select>
+          </label>
+          <label class="fld wide">
+            <span>Remarks</span>
+            <input type="text" name="remarks" placeholder="Disciplines covered, tariff reference…" />
+          </label>
+
+          <div class="form-actions">
+            <span class="hint">Use <b>Extend</b> in the list below when head office extends an empanelment — the earlier period is kept on file.</span>
+            <button type="button" class="btn hidden" id="hosCancelEdit">Cancel edit</button>
+            <button type="submit" class="btn primary" id="hosSaveBtn">Save Hospital</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="toolbar">
+        <div class="tabs" id="hosTabs">
+          <button class="tab active" data-status="all">All</button>
+          <button class="tab" data-status="active">In force</button>
+          <button class="tab" data-status="expiring">Expiring soon</button>
+          <button class="tab" data-status="expired">Expired</button>
+        </div>
+        <input class="search" id="hosSearch" type="search" placeholder="Search hospital, place, order no…" />
+      </div>
+
+      <div class="card flush">
+        <div class="table-wrap"><table class="grid" id="hosTable"></table></div>
+      </div>
+      <p class="muted small" id="hosCount"></p>
+    </section>
+
+    <!-- ---------- MEDICAL CLAIMS ---------- -->
+    <section class="view hidden" id="view-claims">
+      <header class="page-head no-print">
+        <div>
+          <h1>Medical Claims</h1>
+          <p class="muted">Cashless treatment billed by empanelled hospitals, and expenses reimbursed to staff</p>
+        </div>
+        <div class="head-actions">
+          <button class="btn" id="clmCsv">⭳ Download (.csv)</button>
+          <button class="btn" data-report="monthly">🖶 Monthly register</button>
+        </div>
+      </header>
+
+      <div class="card" id="clmFormCard">
+        <div class="card-head"><h2 id="clmFormTitle">New Claim</h2></div>
+        <form id="clmForm" class="form-grid">
+          <input type="hidden" name="id" />
+
+          <div class="fld wide claim-type">
+            <span>Kind of claim <b>*</b></span>
+            <div class="radio-row">
+              <label class="radio-opt">
+                <input type="radio" name="type" value="HOSPITAL" id="clmTypeHospital" checked />
+                <span><b>Hospital claim</b> — cashless treatment at an empanelled hospital</span>
+              </label>
+              <label class="radio-opt">
+                <input type="radio" name="type" value="REIMB" id="clmTypeReimb" />
+                <span><b>Individual reimbursement</b> — expenses already paid by the staff member</span>
+              </label>
+            </div>
+            <span class="hint" id="clmPayee"></span>
+          </div>
+
+          <label class="fld">
+            <span>Claim No. <b>*</b></span>
+            <input type="text" name="no" required />
+          </label>
+          <label class="fld">
+            <span>Date of claim</span>
+            <input type="date" name="date" />
+          </label>
+          <label class="fld wide">
+            <span>Staff member <b>*</b></span>
+            <select name="staffId" required></select>
+          </label>
+          <label class="fld wide">
+            <span>Treated person <b>*</b></span>
+            <select name="beneficiaryId" required></select>
+          </label>
+          <div class="fld">
+            <span>ID card no. &amp; dependency</span>
+            <div class="read-value dim" id="clmCardNo">—</div>
+          </div>
+
+          <label class="fld wide">
+            <span id="clmHospLabel">Empanelled hospital <b>*</b></span>
+            <select name="hospitalId"></select>
+          </label>
+          <label class="fld wide hidden" id="clmOtherWrap">
+            <span>Name of hospital (not on the empanelled list)</span>
+            <input type="text" name="hospitalName" />
+          </label>
+          <label class="fld">
+            <span>Date of treatment <b>*</b></span>
+            <input type="date" name="treatFrom" required />
+          </label>
+          <label class="fld">
+            <span>Treated upto</span>
+            <input type="date" name="treatTo" />
+          </label>
+          <div class="hint claim-note" id="clmEmpanelNote"></div>
+          <label class="fld wide">
+            <span>Diagnosis / treatment taken</span>
+            <input type="text" name="diagnosis" />
+          </label>
+          <label class="fld">
+            <span>Bill no.</span>
+            <input type="text" name="billNo" />
+          </label>
+          <label class="fld">
+            <span>Bill date</span>
+            <input type="date" name="billDate" />
+          </label>
+
+          <label class="fld">
+            <span id="clmClaimedLabel">Amount claimed <b>*</b></span>
+            <input type="number" name="amountClaimed" step="0.01" min="0" required />
+          </label>
+          <label class="fld">
+            <span id="clmReimbLabel">Amount reimbursed</span>
+            <input type="number" name="amountReimbursed" step="0.01" min="0" />
+          </label>
+          <label class="fld">
+            <span>Present position</span>
+            <select name="status">
+              <option value="PENDING">Pending</option>
+              <option value="SANCTIONED">Sanctioned</option>
+              <option value="PAID">Paid</option>
+              <option value="REJECTED">Rejected</option>
+            </select>
+          </label>
+          <label class="fld">
+            <span>Sanction no.</span>
+            <input type="text" name="sanctionNo" />
+          </label>
+          <label class="fld">
+            <span>Sanction date</span>
+            <input type="date" name="sanctionDate" />
+          </label>
+          <label class="fld">
+            <span>Date of payment</span>
+            <input type="date" name="paidDate" />
+          </label>
+          <label class="fld">
+            <span>Mode of payment</span>
+            <select name="mode">
+              <option value="">—</option>
+              <option>Bank transfer</option>
+              <option>Cheque</option>
+              <option>Cash</option>
+              <option>Adjusted in salary</option>
+            </select>
+          </label>
+          <label class="fld wide">
+            <span>Remarks</span>
+            <input type="text" name="remarks" />
+          </label>
+
+          <div class="form-actions">
+            <button type="button" class="btn hidden" id="clmCancelEdit">Cancel edit</button>
+            <button type="submit" class="btn primary" id="clmSaveBtn">Save Claim</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="toolbar">
+        <div class="tabs" id="clmTabs">
+          <button class="tab active" data-type="all">All claims</button>
+          <button class="tab" data-type="HOSPITAL">Cashless</button>
+          <button class="tab" data-type="REIMB">Reimbursement</button>
+        </div>
+        <label class="inline-fld"><span>Month</span><input type="month" id="clmMonth" /></label>
+        <label class="inline-fld"><span>Year</span><select id="clmFy"></select></label>
+        <label class="inline-fld"><span>Position</span>
+          <select id="clmStatus">
+            <option value="all">All</option>
+            <option value="PENDING">Pending</option>
+            <option value="SANCTIONED">Sanctioned</option>
+            <option value="PAID">Paid</option>
+            <option value="REJECTED">Rejected</option>
+          </select>
+        </label>
+        <input class="search" id="clmSearch" type="search" placeholder="Search name, claim no, bill no, hospital…" />
+      </div>
+
+      <div class="totals-bar" id="clmTotals"></div>
+
+      <div class="card flush">
+        <div class="table-wrap"><table class="grid" id="clmTable"></table></div>
+      </div>
+    </section>
+
+    <!-- ---------- REPORTS ---------- -->
+    <section class="view hidden" id="view-reports">
+      <header class="page-head no-print">
+        <div>
+          <h1>Reports</h1>
+          <p class="muted">Print on A4, save as a PDF, or download the same figures as a spreadsheet</p>
+        </div>
+      </header>
+
+      <div class="card no-print">
+        <div class="report-picker">
+          <label class="fld">
+            <span>Report</span>
+            <select id="reportType">
+              <optgroup label="Regular returns">
+                <option value="monthly">Monthly Claim Register</option>
+                <option value="annual">Annual Claim Statement</option>
+              </optgroup>
+              <optgroup label="Payment due">
+                <option value="hospital-reimb">Hospital Reimbursement Report</option>
+                <option value="staff-reimb">Staff Reimbursement Report</option>
+              </optgroup>
+              <optgroup label="One staff member / one hospital">
+                <option value="staff-statement">Individual Staff Claim Statement</option>
+                <option value="hospital-statement">Hospital-wise Claim Statement</option>
+              </optgroup>
+              <optgroup label="Master lists">
+                <option value="empanelled">List of Empanelled Hospitals</option>
+                <option value="staff-register">Register of Staff &amp; Dependents</option>
+              </optgroup>
+              <optgroup label="Single sheets">
+                <option value="voucher">Claim Voucher (one claim)</option>
+                <option value="card">Medical Card (one family)</option>
+              </optgroup>
+            </select>
+          </label>
+          <label class="fld" id="repMonthWrap">
+            <span>Month</span>
+            <input type="month" id="reportMonth" />
+          </label>
+          <label class="fld hidden" id="repYearWrap">
+            <span>Year</span>
+            <select id="reportYear"></select>
+          </label>
+          <label class="fld hidden" id="repStaffWrap">
+            <span>Staff member</span>
+            <select id="reportStaff"></select>
+          </label>
+          <label class="fld hidden" id="repHospitalWrap">
+            <span>Hospital</span>
+            <select id="reportHospital"></select>
+          </label>
+          <label class="fld hidden" id="repRecordWrap">
+            <span id="repRecordLabel">Record</span>
+            <select id="reportRecord"></select>
+          </label>
+          <div class="form-actions">
+            <button class="btn" id="btnBuildReport">Preview</button>
+            <button class="btn" id="btnCsvReport">⭳ Download (.csv)</button>
+            <button class="btn hidden" id="btnPdfReport">⭳ Save as PDF</button>
+            <button class="btn primary" id="btnPrintReport">🖶 Print</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="reportArea" class="report-area"></div>
+    </section>
+
+    <!-- ---------- SETTINGS ---------- -->
+    <section class="view hidden" id="view-settings">
+      <header class="page-head no-print">
+        <div>
+          <h1>Settings &amp; Backup</h1>
+          <p class="muted">Office details printed on every sheet, and your data backup</p>
+        </div>
+      </header>
+
+      <div class="card">
+        <h2 class="card-title">Office details</h2>
+        <form id="settingsForm" class="form-grid">
+          <label class="fld wide">
+            <span>Name of office / centre <b>*</b></span>
+            <input type="text" name="officeName" required placeholder="e.g. Regional Office, Alappuzha" />
+          </label>
+          <label class="fld wide">
+            <span>Address</span>
+            <input type="text" name="address" />
+          </label>
+          <label class="fld">
+            <span>Dealing assistant</span>
+            <input type="text" name="dealingAssistant" />
+          </label>
+          <label class="fld">
+            <span>Medical Officer</span>
+            <input type="text" name="officer" />
+          </label>
+          <label class="fld">
+            <span>Claims sanctioned by</span>
+            <input type="text" name="sanctioning" placeholder="printed on the vouchers" />
+          </label>
+          <label class="fld">
+            <span>Currency symbol</span>
+            <input type="text" name="currency" maxlength="3" />
+          </label>
+          <label class="fld">
+            <span>Office year starts in</span>
+            <select name="fyStartMonth">
+              <option value="4">April (financial year)</option>
+              <option value="1">January (calendar year)</option>
+              <option value="7">July</option>
+              <option value="10">October</option>
+            </select>
+          </label>
+          <label class="fld">
+            <span>Empanelment alert — days before it runs out</span>
+            <input type="number" name="empanelWarnDays" min="0" step="1" />
+          </label>
+          <div class="form-actions">
+            <button type="submit" class="btn primary">Save Settings</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">Backup &amp; restore</h2>
+        <p class="muted small browser-only">All data lives inside this browser. Export a backup file
+          after every monthly return and keep it safe.</p>
+        <div class="desktop-only hidden">
+          <p class="muted small">The register is saved automatically to a file on this computer, and a
+            snapshot is kept every day. Still take your own backup after each monthly return and keep it
+            on a pen drive or a shared folder.</p>
+          <p class="path-line">Register file: <code id="dataPath">—</code></p>
+          <p class="path-line">Daily snapshots: <code id="backupPath">—</code></p>
+        </div>
+        <div class="btn-row">
+          <button class="btn primary" id="btnExport">⭳ Export backup (.json)</button>
+          <button class="btn" id="btnImport">⭱ Restore from backup</button>
+          <input type="file" id="importFile" accept="application/json,.json" hidden />
+          <button class="btn" id="btnCsvStaff">Export staff &amp; dependents (.csv)</button>
+          <button class="btn" id="btnCsvHospitals">Export empanelled hospitals (.csv)</button>
+          <button class="btn" id="btnCsvClaims">Export all claims (.csv)</button>
+        </div>
+      </div>
+
+      <div class="card" id="guideCard">
+        <h2 class="card-title">How to use this register</h2>
+        <ol class="guide">
+          <li><b>Set up once</b> — fill in the office details above. Then enter every employee in
+            <b>Staff &amp; Dependents</b> together with the family covered by his card, and put the
+            empanelled hospitals into <b>Empanelled Hospitals</b>. The whole hospital list can be
+            uploaded from a spreadsheet instead of being typed — press <b>Sample list</b> to see the
+            columns it expects.</li>
+          <li><b>When an empanelment is extended</b> — press <b>Extend</b> against the hospital and
+            enter the new date and the order number. The period in force moves forward and the one it
+            replaced is kept on file, so an old bill can still be checked against the empanelment that
+            applied on the day of treatment.</li>
+          <li><b>As claims come in</b> — enter them in <b>Medical Claims</b>. A hospital claim is
+            cashless treatment settled with the hospital; an individual reimbursement is money paid
+            back to the employee. Fill in the amount claimed when the bill arrives and the amount
+            reimbursed when it is passed, and the outstanding balance follows on its own.</li>
+          <li><b>Every month</b> — print or download the <b>Monthly Claim Register</b>, and the two
+            reimbursement reports for what is payable to the hospitals and to the staff.</li>
+          <li><b>Every year</b> — print or download the <b>Annual Claim Statement</b>, which sets the
+            year out month by month with cashless against reimbursement.</li>
+          <li><b>When somebody asks</b> — the <b>Individual Staff Claim Statement</b> answers what one
+            employee has drawn, and the <b>Hospital-wise Claim Statement</b> answers what one hospital
+            has billed.</li>
+          <li><b>Finally</b> — take a backup and keep the file safe.</li>
+        </ol>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">Sample data</h2>
+        <p class="muted small">Load a small set of demo staff, hospitals and claims to try the app.
+          This adds to existing data.</p>
+        <div class="btn-row">
+          <button class="btn" id="btnSample">Load sample data</button>
+          <button class="btn danger" id="btnWipe">Erase all data</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ================= EXTEND EMPANELMENT ================= -->
+<div class="modal-back hidden no-print" id="extModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>Extend Empanelment</h2>
+      <button class="icon-btn" id="extClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="muted small">
+        <b id="extHospital"></b><br />
+        Empanelment in force now: <span id="extCurrent"></span>
+      </p>
+      <form id="extForm" class="form-grid">
+        <label class="fld">
+          <span>Empanelled from</span>
+          <input type="date" name="from" />
+        </label>
+        <label class="fld">
+          <span>Extended upto <b>*</b></span>
+          <input type="date" name="to" required />
+        </label>
+        <label class="fld">
+          <span>Extension order no.</span>
+          <input type="text" name="order" />
+        </label>
+        <label class="fld">
+          <span>Order dated</span>
+          <input type="date" name="orderDate" />
+        </label>
+        <label class="fld wide">
+          <span>Remarks</span>
+          <input type="text" name="remarks" />
+        </label>
+        <div class="form-actions">
+          <button type="button" class="btn" id="extCancel">Cancel</button>
+          <button type="submit" class="btn primary">Record Extension</button>
+        </div>
+      </form>
+      <div class="card-head"><h2>Earlier periods on file</h2></div>
+      <div id="extHistory" class="mini-list"></div>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden no-print"></div>
+
+<script src="assets/js/store.js"></script>
+<script src="assets/js/ui.js"></script>
+<script src="assets/js/staff.js"></script>
+<script src="assets/js/hospitals.js"></script>
+<script src="assets/js/claims.js"></script>
+<script src="assets/js/reports.js"></script>
+<script src="assets/js/statements.js"></script>
+<script src="assets/js/app.js"></script>
+
+</body>
+</html>

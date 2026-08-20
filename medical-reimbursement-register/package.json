@@ -1,0 +1,75 @@
+{
+  "name": "medical-reimbursement-register",
+  "productName": "Medical Reimbursement Register",
+  "version": "1.0.0",
+  "description": "Office register for medical claims — staff and their dependents, the empanelled hospital list with its periods of empanelment, cashless hospital claims and individual reimbursement claims, with monthly, annual, staff-wise and hospital-wise statements.",
+  "main": "main.js",
+  "author": {
+    "name": "Medical Reimbursement Register"
+  },
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win --x64",
+    "dist:linux": "electron-builder --linux AppImage"
+  },
+  "devDependencies": {
+    "electron": "^43.0.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "org.medicalcentre.reimbursementregister",
+    "productName": "Medical Reimbursement Register",
+    "copyright": "Medical Reimbursement Register",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "index.html",
+      "main.js",
+      "preload.js",
+      "assets/**/*",
+      "build/icon.*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Reimbursement Register",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "artifactName": "MedicalReimbursementRegister-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "MedicalReimbursementRegister-Portable-${version}.${ext}"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Office",
+      "icon": "build/icon.png"
+    }
+  }
+}

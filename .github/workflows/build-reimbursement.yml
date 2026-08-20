@@ -1,0 +1,107 @@
+name: Build Medical Reimbursement Register exe
+
+# Builds the reimbursement register on a real Windows machine.
+#
+#  * every push / manual run  -> the .exe files are attached to the run
+#    as downloadable artifacts
+#  * a pushed tag like reimbursement-v1.0.0, and the default branch,
+#    publish the .exe files on the repository's Releases page
+
+on:
+  push:
+    branches: ['**']
+    tags: ['reimbursement-v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    working-directory: medical-reimbursement-register
+
+jobs:
+  windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build installer and portable exe
+        run: npx electron-builder --win --x64 --publish never
+
+      - name: Check the exe files were produced
+        shell: pwsh
+        run: |
+          Get-ChildItem dist -Filter *.exe | ForEach-Object {
+            "{0}  —  {1:N1} MB" -f $_.Name, ($_.Length / 1MB)
+          }
+          if (-not (Get-ChildItem dist -Filter *.exe)) {
+            throw "no .exe was produced"
+          }
+
+      - name: Smoke-test the built app
+        shell: pwsh
+        run: |
+          # Launch the packaged app and confirm the process stays up,
+          # which catches a broken package that cannot even start.
+          $exe = "dist\win-unpacked\Medical Reimbursement Register.exe"
+          if (-not (Test-Path $exe)) { throw "packaged exe missing" }
+          $p = Start-Process -FilePath $exe -PassThru
+          Start-Sleep -Seconds 20
+          if ($p.HasExited) {
+            throw "the app exited immediately with code $($p.ExitCode)"
+          }
+          Stop-Process -Id $p.Id -Force
+          "app started and stayed running"
+
+      - name: Upload the exe files as build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: reimbursement-exe
+          path: |
+            medical-reimbursement-register/dist/*.exe
+          retention-days: 90
+
+      - name: Read the version from package.json
+        id: ver
+        shell: pwsh
+        run: |
+          $v = (Get-Content package.json | ConvertFrom-Json).version
+          "version=$v" >> $env:GITHUB_OUTPUT
+
+      # Publishes on a version tag, and also on the default branch so the
+      # current build is always downloadable without having to tag by hand.
+      - name: Publish the release
+        if: startsWith(github.ref, 'refs/tags/reimbursement-v') || github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: reimbursement-v${{ steps.ver.outputs.version }}
+          name: Medical Reimbursement Register v${{ steps.ver.outputs.version }}
+          files: medical-reimbursement-register/dist/*.exe
+          body: |
+            **Medical Reimbursement Register** — Windows desktop app.
+
+            | File | What it is |
+            |---|---|
+            | `MedicalReimbursementRegister-Setup-*.exe` | Installer. Run it, then start the app from the Desktop shortcut. No administrator rights needed. |
+            | `MedicalReimbursementRegister-Portable-*.exe` | Portable. Runs straight from a pen drive, nothing installed. |
+
+            Windows SmartScreen will warn that the publisher is unknown — the
+            app is not code-signed. Choose **More info → Run anyway**.
+
+            The register is kept in a file on the computer, under
+            `%APPDATA%\Medical Reimbursement Register\`, with a daily snapshot
+            in the `backups` folder beside it.
+
+            This is a separate program from the Stock Register and keeps its
+            own data file; the two do not affect each other.
