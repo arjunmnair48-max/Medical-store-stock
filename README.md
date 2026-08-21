@@ -15,6 +15,14 @@ internet connection is needed.
 There are two ways to run it — a **Windows program** (recommended) or by
 opening a file in a browser.
 
+> **Medical claims are a separate program.**
+> [`medical-reimbursement-register/`](medical-reimbursement-register/) in this
+> repository is the **Medical Reimbursement Register** — staff and their
+> dependents, the empanelled hospital list with its periods of empanelment,
+> cashless hospital claims and individual reimbursement claims, with monthly,
+> annual, staff-wise and hospital-wise statements. It has its own installer and
+> its own data file, and can be installed alongside this one.
+
 ---
 
 ## Getting started — Windows program
